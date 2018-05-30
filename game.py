@@ -3,7 +3,7 @@ class Nation(object):
     >>> n = Nation(args={'p':123, 'a':0.5, 'r':[0, -1, 1, None, 1]})
     >>> new_n = Nation(n) # Copy nation
     """
-    PARAMS = ['a', 'p', 'r']
+    PARAMS = ['a', 'p', 'r', 'd', 'name']
     def __init__(self, n=None, args={}):
         if n is not None:
             for p in self.PARAMS:
@@ -76,7 +76,8 @@ class State:
             pass
         
         now_player_i_next = (self.now_player_i + 1) % len(self.players)
-        new_state = State(self.players, now_player_i_next, nations) """nations needs to update by taking action above"""
+        new_state = State(self.players, now_player_i_next, nations)
+        """nations needs to update by taking action above"""
         return new_state
         
         
@@ -88,6 +89,7 @@ class State:
         pass
     
     def update(self):
+        pass
         
 class Game:
     '''
