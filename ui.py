@@ -6,14 +6,14 @@ import numpy as np
 
 class PaintConfig(object):
     class Relation():
-        WIDTH = 6
+        WIDTH = 3
         FRIEND_COLOR = (125, 255, 125)
         EMENY_COLOR = (255, 60, 60)
         def __init__(self, r):
             self.r = r
         @property
         def width(self):
-            return int(abs(self.r)*self.WIDTH)
+            return int(abs(self.r) ** 1.5 * self.WIDTH)
         @property
         def color(self):
             if self.r > 0:
@@ -36,10 +36,15 @@ class PaintConfig(object):
         def color(self):
             c = np.array([self.strhash(self.n.name, s)%256 for s in [7, 11, 13]])
             return c
-        def relation(self, r):
-            if abs(r) >= 1:
-                return PaintConfig.Relation(r)
-            return None
+    class Action():
+        IMGS = {}
+        def __init__(self, act):
+            if not act in self.IMGS:
+                self.IMGS[act] = pygame.image.load(f"resources/{act}.png")
+            self.act = act
+        @property
+        def image(self):
+            return self.IMGS[act]
 
     def __init__(self):
         self.width = 800
@@ -47,6 +52,23 @@ class PaintConfig(object):
         self.size = (self.width, self.height)
     def nation(self, nation):
         return PaintConfig.Nation(nation)
+    def relation(self, r):
+        if abs(r) >= 1:
+            return PaintConfig.Relation(r)
+        return None
+    def action(self, act):
+        return PaintConfig.Action(act)
+
+
+myimage = pygame.image.load("myimage.bmp")
+imagerect = myimage.get_rect()
+
+while 1:
+    your_code_here
+
+    screen.fill(black)
+    screen.blit(myimage, imagerect)
+    pygame.display.flip()
     
 class GameWithUI(Game):
     class Country():
@@ -55,6 +77,8 @@ class GameWithUI(Game):
     def __init__(self, players, initial_state):
         self.pc = PaintConfig()
         pygame.init()
+        pygame.font.init()
+        self.font = pygame.font.SysFont('Comic Sans MS', 20)
         self.screen = pygame.display.set_mode(self.pc.size)
         d = np.array([n.d for n in initial_state.nations])
         self.nation_pos = self.calc_pos(d)[0]
@@ -97,16 +121,19 @@ class GameWithUI(Game):
         p = p.astype(np.int32)
         return p, ps
     def paint_nation(self):
-        for r, n in zip(self.nation_pos, self.state.nations):
-            n = self.pc.nation(n)
+        for r, _n in zip(self.nation_pos, self.state.nations):
+            n = self.pc.nation(_n)
             pygame.draw.circle(
                     self.screen,
                     n.color, r, n.size, 0)
+            text = self.font.render(_n.name, True, (0,0,0))
+            text_rect = text.get_rect(center=r)
+            self.screen.blit(text, text_rect)
     def paint_relation(self):
         for i, n1 in enumerate(self.state.nations):
             for j, n2 in enumerate(self.state.nations):
-                if i<=j: continue
-                r = self.pc.nation(n1).relation(n1.r[j])
+                if i>=j: continue
+                r = self.pc.relation(n1.r[j])
                 if r is not None:
                     pygame.draw.line(
                             self.screen,
@@ -114,12 +141,15 @@ class GameWithUI(Game):
                             self.nation_pos[i],
                             self.nation_pos[j],
                             r.width)
-                
-        
     def paint_action(self, act, src, tar):
-        pass
-    def paint(self, state, player, action_taken):
-        pass
+        img = self.pc.action(act).image
+        mid = ((act+tar)/2).astype(np.int32).tolist()
+        img_rect = myimage.get_rect(center=mid)
+        self.screen.blit(img, img_rect)
+    def paint(self):
+        g.paint_relation()
+        g.paint_nation()
+        g.paint_action(0,0,0)
     def run(self, n_turns=200):
         for t in range(n_turns):
             p = self.state.now_player
@@ -135,7 +165,7 @@ if __name__=='__main__':
     s = S([Nation(args={
         'd': d[i],
         'p': (i+2)*0.25,
-        'r': [1, -1, 0, -2],
+        'r': [1, -1, 0, 5],
         'name': 'nation_'+str(i)
         }) for i in range(4)])
     g = GameWithUI(None, s)
@@ -146,7 +176,6 @@ if __name__=='__main__':
             for event in pygame.event.get():
                 pass
             g.screen.fill((0,0,0))
-            g.paint_relation()
-            g.paint_nation()
+            g.paint()
             pygame.display.flip()
 
