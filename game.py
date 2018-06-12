@@ -1,11 +1,16 @@
 import math
 import enum
+
+from action_effect import export_effect
+
 from itertools import chain as original_chain
 import random
 from AIAlgo import SimpleAlgo, Beam, MCTS
 random.seed(1)
 
-chain = lambda l: list(original_chain.from_iterable(l))
+def chain(l):
+    return list(original_chain.from_iterable(l))
+
 
 def clone(o):
     if type(o) is dict:
@@ -17,6 +22,8 @@ def clone(o):
 def in_range(n, r):
     a, b = r if r[0] < r[1] else (r[1], r[0])
     return max(a, min(b, n))
+
+
 class Nation(object):
     """
         >>> n = Nation(args={'p':123, 'a':0.5, 'r':[0, -1, 1, None, 1]})
@@ -33,6 +40,10 @@ class Nation(object):
         for p in self.PROPERTYS:
             if not hasattr(self, p):
                 setattr(self, p, 0)
+        self.parameter_check()
+    def change(self, args):
+        return Nation(self, args)
+    def parameter_check(self):
         for i, r in enumerate(self.r):
             self.r[i] = in_range(r, (-1, 1))
         self.r[self.idx] = 0
@@ -53,7 +64,7 @@ class Nation(object):
         ga, gb, gc = [self.PARAMS[k] for k in ['a', 'b', 'c']]
         nis, nms = ([n.i for n in nations], [n.m for n in nations])
         m1 = m + e * a
-        return Nation(n=self, args={
+        return self.change({
             'in_war': False,
             'e': e * (1 - a) * (1 + i + t) if not in_war else e,
             'm': m + e * a,
@@ -61,22 +72,12 @@ class Nation(object):
             'p': m1 + gc * sum([_r * _d * _m for _r, _d, _m in self.others(ns, zip(r, d, nms))])
         })
 
-from action_effect import DefaultEffect
-
 Action = enum.Enum('Action', 'INVADE DENOUNCE MAKE_FRIEND SUPPLY CONSTRUCT EXTORT POLICY')
-
 
 class State:
     INVADE_B = -1
 
-    invade = DefaultEffect.invade
-    denounce = DefaultEffect.denounce
-    make_friend = DefaultEffect.make_friend
-    supply = DefaultEffect.supply
-    construct = DefaultEffect.construct
-    extort = DefaultEffect.extort
-    policy = DefaultEffect.policy
-    
+    action_function = {k: export_effect[k.name.lower()] for k in Action }
 
     def __init__(self, state=None, args={}):
         """
@@ -119,14 +120,9 @@ class State:
         nations = new_state.nations
         """doing action to update nations"""
         self.performed_action = action
-        action, tar = action
+        action, arg = action
         src = self.now_player_i
-        for _action in Action:
-            if action == _action:
-                action_function = getattr(self, action.name.lower())
-                action_function(nations, src, tar)
-        if not action in Action:
-            raise Exception('Not valid action: ' + str(action))
+        self.action_function[action](nations, src, arg)
         nations[src] = nations[src].updated(nations)
         while True:
             new_state.now_player_i = (new_state.now_player_i + 1) % len(new_state.nations)
@@ -253,6 +249,7 @@ def simple_h(player, state, action_taken):
 if __name__=='__main__':
     # algo = Beam
     algo = MCTS
+
     players = [
         AIPlayer('Alice', algo(), simple_h),
         AIPlayer('Bob', algo(), simple_h),
