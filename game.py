@@ -12,9 +12,6 @@ def clone(o):
         return o
     return o
 
-
-
-
 class Nation(object):
     """
         >>> n = Nation(args={'p':123, 'a':0.5, 'r':[0, -1, 1, None, 1]})
@@ -31,10 +28,10 @@ class Nation(object):
         for p in self.PROPERTYS:
             if not hasattr(self, p):
                 setattr(self, p, 0)
-    def __repr__(self):
-        return 'Nation: ' + {p:getattr(self, p) for p in self.PROPERTYS}.__repr__()
     def __str__(self):
         return 'Nation: ' + {p:getattr(self, p) for p in self.PROPERTYS}.__str__()
+    def __repr__(self):
+        return f"{'X' if self.die else 'O'} e:{self.e:7.2f}  m:{self.m:7.2f}  a:{self.a:7.2f}  r: {self.r}"
     def others(self, nations, targets):
         return [v for i, (n, v) in enumerate(zip(nations, targets)) if i != self.idx and not n.die]
     def updated(self, nations):
@@ -74,14 +71,21 @@ class State:
         if state is not None:
             self.now_player_i = state.now_player_i
             self.players = state.players
+            self.last_state = state
             self.nations = clone(nations)
+        else:
+            self.last_state = None
+        self.performed_action = None
         for k, v in args.items():
             setattr(self, k, v)
     @property
     def now_player(self):
         return self.players[self.now_player_i]
     def __repr__(self):
-        return '\n'.join([('> ' if i==self.now_player_i else '  ') + str(n) for i, n in enumerate(self.nations)])
+        return self.show(show=lambda n: str(n))
+    def show(self, show=lambda n: repr(n)):
+        def ptr(i, n): return ('> ' if i==self.now_player_i else '  ')
+        return '\n'.join([ptr(i, n) + repr(n) for i, n in enumerate(self.nations)])
     def sigmoid(self, x):
         return 1 / (1 + math.exp(-x))
     def next_turn(self, action):
@@ -97,6 +101,7 @@ class State:
         new_state = State(self)
         nations = new_state.nations
         """doing action to update nations"""
+        self.performed_action = action
         action, tar = action
         src = self.now_player_i
         src_n, tar_n = nations[src], nations[tar]
@@ -117,7 +122,7 @@ class State:
             nations[tar] = Nation(tar_n, {'r': [r if i!=src else min(r+0.5, 1) for i, r in enumerate(tar_n.r)]})
         elif action == "supply":
             nations[tar] = Nation(tar_n, {'e': 1.3 * src_n.e})
-        elif action == "policy":
+        elif action == "construct":
             if tar > 0:
                 nations[src] = Nation(src_n, {'a': min(1, src_n.a + 0.25)})
             else:
@@ -135,7 +140,15 @@ class State:
         """
         idxs = [i for i, n in enumerate(self.nations) if i != self.now_player_i and not n.die]
         interact_actions = [(a, i) for a in ['invade', 'denounce', 'make_friend', 'supply'] for i in idxs]
-        return interact_actions + [('policy', 1), ('policy', -1)]
+        return interact_actions + [('construct', 1), ('construct', -1)]
+    def trace(self, l=None):
+        if l==None: l = []
+        if self.last_state==None:
+            l.append(self)
+        else:
+            self.last_state.trace(l)
+            l.append(self)
+        return l
 
 class Game:
     '''
@@ -147,13 +160,17 @@ class Game:
         for i, p in enumerate(self.players):
             p.idx = i
     def run(self, n_turns=200):
+        print('Game setting')
+        print(self.state)
         for t in range(n_turns):
             p = self.state.now_player
             act = p.action(self.state)
             self.state = self.state.next_turn(act)
-            print('Player ' + p.name + ' did ' + str(act))
-            print(self.state)
+            print(self.state.show())
+            print('After player ' + p.name + ' did ' + str(act))
+            print(self.state.show())
             print()
+            input()
 
 class Player:
     '''
