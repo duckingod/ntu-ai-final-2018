@@ -1,7 +1,12 @@
 import math
 import enum
+
+from action_effect import export_effect
+
 from itertools import chain as original_chain
-chain = lambda l: list(original_chain.from_iterable(l))
+
+def chain(l):
+    return list(original_chain.from_iterable(l))
 
 def clone(o):
     if type(o) is dict:
@@ -13,6 +18,8 @@ def clone(o):
 def in_range(n, r):
     a, b = r if r[0] < r[1] else (r[1], r[0])
     return max(a, min(b, n))
+
+
 class Nation(object):
     """
         >>> n = Nation(args={'p':123, 'a':0.5, 'r':[0, -1, 1, None, 1]})
@@ -29,6 +36,10 @@ class Nation(object):
         for p in self.PROPERTYS:
             if not hasattr(self, p):
                 setattr(self, p, 0)
+        self.parameter_check()
+    def change(self, args):
+        return Nation(self, args)
+    def parameter_check(self):
         for i, r in enumerate(self.r):
             self.r[i] = in_range(r, (-1, 1))
         self.r[self.idx] = 0
@@ -49,7 +60,7 @@ class Nation(object):
         ga, gb, gc = [self.PARAMS[k] for k in ['a', 'b', 'c']]
         nis, nms = ([n.i for n in nations], [n.m for n in nations])
         m1 = m + e * a
-        return Nation(n=self, args={
+        return self.change({
             'in_war': False,
             'e': e * (1 - a) * (1 + i + t) if not in_war else e,
             'm': m + e * a,
@@ -57,21 +68,12 @@ class Nation(object):
             'p': m1 + gc * sum([_r * _d * _m for _r, _d, _m in self.others(ns, zip(r, d, nms))])
         })
 
-from action_effect import DefaultEffect
-
 Action = enum.Enum('Action', 'INVADE DENOUNCE MAKE_FRIEND SUPPLY CONSTRUCT EXTORT POLICY')
-
 
 class State:
     INVADE_B = -1
 
-    invade = DefaultEffect.invade
-    denounce = DefaultEffect.denounce
-    make_friend = DefaultEffect.make_friend
-    supply = DefaultEffect.supply
-    construct = DefaultEffect.construct
-    extort = DefaultEffect.extort
-    policy = DefaultEffect.policy
+    action_function = {k: export_effect[k.name.lower()] for k in Action }
 
     def __init__(self, state=None, args={}):
         """
@@ -114,14 +116,9 @@ class State:
         nations = new_state.nations
         """doing action to update nations"""
         self.performed_action = action
-        action, tar = action
+        action, arg = action
         src = self.now_player_i
-        for _action in Action:
-            if action == _action:
-                action_function = getattr(self, action.name.lower())
-                action_function(nations, src, tar)
-        if not action in Action:
-            raise Exception('Not valid action: ' + str(action))
+        self.action_function[action](nations, src, arg)
         nations[src] = nations[src].updated(nations)
         while True:
             new_state.now_player_i = (new_state.now_player_i + 1) % len(new_state.nations)
@@ -179,7 +176,6 @@ class Player:
     def action(self, state):
         raise NotImplementedError("To be implemented QAQ")
 
-
 class AIPlayer(Player):
     '''
     ( ･ิω･ิ)
@@ -214,6 +210,7 @@ class SimpleAlgo(AIAlgo):
     def get_action(self, state):
         from random import sample
         return sample(state.actions(), 1)[0]
+
 class Beam(AIAlgo):
     '''
     (*ﾟ∀ﾟ*)
@@ -221,17 +218,28 @@ class Beam(AIAlgo):
     RRRRRRRRR
     da'shen'hao'shen
     '''
-    def __init__(self, topk=20, turns=30):
+    def __init__(self, topk=20, turns=40):
         self.topk = topk
         self.turns = turns
     def get_action(self, state):
         player = state.now_player
         states = [(state.next_turn(a), None, a) for a in state.actions() ]
-        for i in range(self.turns):
-            p = states[0][0].now_player
-            states = chain([[(s.next_turn(a), a, original_a) for a in s.actions()] for s, _, original_a in states])
-            states.sort(key=lambda s: -p.h(s[0], s[1]))
-            states = states[:self.topk]
+        player_i = state.now_player_i
+        n_player = len(state.players)
+        for i in range(self.turns // n_player):
+            for j in range(1, n_player): # 1 because state of this player has been expanded above
+                now_player = state.players[(player_i + j) % n_player]
+                new_states, pass_states = [], []
+                for s, _, original_a in states:
+                    if s.now_player == now_player:
+                        new_states.append([(s.next_turn(a), a, original_a) for a in s.actions()])
+                    else:
+                        pass_states.append((s, None, original_a))
+                new_states = chain(new_states)
+                new_states.sort(key=lambda s: -now_player.h(s[0], s[1]))
+                # make 'passed turn' be in top k
+                # that is, maintain he 'cannot do anything and pass the turn'
+                states = (pass_states + new_states)[:self.topk]
         return max(states, key=lambda s: player.h(s[0], s[2]))[2] # Bug! s[2] is not correct QQ
 
 def simple_h(player, state, action_taken):
@@ -239,6 +247,7 @@ def simple_h(player, state, action_taken):
     return n.e + n.m
 
 if __name__=='__main__':
+
     algo = Beam
     players = [
         AIPlayer('Alice', algo(), simple_h),
