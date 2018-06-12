@@ -1,7 +1,8 @@
-# try
-# try try
 import math
 from itertools import chain as original_chain
+import random
+random.seed(0)
+
 chain = lambda l: list(original_chain.from_iterable(l))
 
 def clone(o):
@@ -134,7 +135,8 @@ class State:
         new_state.nations[src] = nations[src].updated(nations)
         while True:
             new_state.now_player_i = (new_state.now_player_i + 1) % len(new_state.nations)
-            if not nations[self.now_player_i].die: break
+            if not nations[new_state.now_player_i].die: break
+            # else: print(new_state.now_player_i)
         return new_state
     def actions(self):
         """
@@ -241,16 +243,72 @@ class Beam(AIAlgo):
             states.sort(key=lambda s: -p.h(s[0], s[1]))
             states = states[:self.topk]
         return max(states, key=lambda s: player.h(s[0], s[2]))[2] # Bug! s[2] is not correct QQ
+class MCTS(AIAlgo):
+    class mcts_node(object):
+        def __init__(self, total_score=0.5, visit_n=1, state=None, parent=None, player=None, parent_action=None):
+            """ set init visit_n=1 to avoid division by zero 
+            set init total_score=0.5 to encourage discover new node
+            """
+            self.total_score = total_score
+            self.visit_n = visit_n
+            self.state = state
+            self.parent = parent
+            self.player = player
+            self.parent_action = parent_action
+            self.child_nodes = []
+    def __init__(self, turns=50, iter_n=9999):
+        """ 
+        turns: depth of Tree
+        iter_n: random simulation times
+        """
+        self.turns = turns
+        self.iter_n = iter_n
+    def selection(self, node):
+        while node.child_nodes:
+            """ maybe need to deal with dead nation situation later
+            """
+            node = max(node.child_nodes, key=lambda child_node: child_node.total_score / child_node.visit_n)
+        return node
+    def expansion(self, node):
+        node.child_nodes = [ self.mcts_node(state=node.state.next_turn(a), parent=node, player=node.state.next_turn(a).now_player, parent_action=a) for a in node.state.actions() ]    
+        return node.child_nodes[0]
+    def simulation(self, node):
+        state = node.state
+        for i in range(self.turns):
+            state = state.next_turn(random.choice(node.state.actions()))
+            # print(state.nations[state.now_player_i])
+        return state
+    def backpropagation(self, state, node):
+        while node.parent:
+            """FIXME"""
+            node.total_score += node.player.h(node.player,state) #""" what is h look like???"""
+            node.visit_n += 1
+            node = node.parent
+        return None
+    def get_action(self, state):
+        self.root = self.mcts_node(state=state)
+        for i in range(self.iter_n):
+            node_select= self.selection(self.root)
+            node_new = self.expansion(node_select)
+            state_final = self.simulation(node_new)
+            self.backpropagation(state_final, node_new)
+        node_best = max(self.root.child_nodes, key=lambda child_node: child_node.total_score / child_node.visit_n)
+        return node_best.parent_action
 
 def simple_h(player, state, action_taken):
     n = state.nations[player.idx]
     return n.e + n.m
 
 if __name__=='__main__':
+    # players = [
+    #     AIPlayer('Alice', Beam(), simple_h),
+    #     AIPlayer('Bob', Beam(), simple_h),
+    #     AIPlayer('Carol', Beam(), simple_h)
+    #     ]
     players = [
-        AIPlayer('Alice', Beam(), simple_h),
-        AIPlayer('Bob', Beam(), simple_h),
-        AIPlayer('Carol', Beam(), simple_h)
+        AIPlayer('Alice', MCTS(), simple_h),
+        AIPlayer('Bob', MCTS(), simple_h),
+        AIPlayer('Carol', MCTS(), simple_h)
         ]
     dist = [
             [0, 0.5, 0.3],
