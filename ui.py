@@ -44,7 +44,7 @@ class PaintConfig(object):
             self.act = act
         @property
         def image(self):
-            return self.IMGS[act]
+            return self.IMGS[self.act]
 
     def __init__(self):
         self.width = 800
@@ -59,17 +59,6 @@ class PaintConfig(object):
     def action(self, act):
         return PaintConfig.Action(act)
 
-
-myimage = pygame.image.load("myimage.bmp")
-imagerect = myimage.get_rect()
-
-while 1:
-    your_code_here
-
-    screen.fill(black)
-    screen.blit(myimage, imagerect)
-    pygame.display.flip()
-    
 class GameWithUI(Game):
     class Country():
         def __init__(self, pos):
@@ -149,7 +138,7 @@ class GameWithUI(Game):
     def paint(self):
         g.paint_relation()
         g.paint_nation()
-        g.paint_action(0,0,0)
+        g.paint_action('invade',0,0)
     def run(self, n_turns=200):
         for t in range(n_turns):
             p = self.state.now_player
