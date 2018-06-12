@@ -76,6 +76,7 @@ class State:
     construct = DefaultEffect.construct
     extort = DefaultEffect.extort
     policy = DefaultEffect.policy
+    
 
     def __init__(self, state=None, args={}):
         """
@@ -187,17 +188,6 @@ class Player:
 
 class HumanPlayer(Player):
     '''
-    ( ･ิω･ิ)
-    (́◉◞౪◟◉‵)
-    ヽ(✿ﾟ▽ﾟ)ノ
-    ヽ(∀ﾟ )人(ﾟ∀ﾟ)人( ﾟ∀)人(∀ﾟ )人(ﾟ∀ﾟ)人( ﾟ∀)ﾉ
-    (*‘ v`*)
-    ｡:.ﾟヽ(*´∀`)ﾉﾟ.:｡
-    ʕ•̫͡ʕ•̫͡ʕ•̫͡ʕ•̫͡•ʔ•̫͡•ʔ•̫͡•ʔ
-
-      ̫̫̫̫
-    ʕ•͡ ̫ •͡ ʔ
-    
     '''
     def __init__(self, ai_name, h):
         self.ai_name = ai_name
@@ -209,10 +199,25 @@ class HumanPlayer(Player):
     def name(self):
         return 'CPU:'+self.ai_name
     def action(self, state):
-        action_input = input("input one action from 'INVADE DENOUNCE MAKE_FRIEND SUPPLY CONSTRUCT EXTORT POLICY':\n>>>")
-        target = input("input target nation index: \n>>>")
-        # return Action[(action_input,target)]
-        return Action[action_input]
+        while True:
+            dict_i_a = dict(list(enumerate(state.actions())))
+            print("valid actions:")
+            print(dict_i_a)
+            action_input = input("plz input one action index or one action from 'INVADE DENOUNCE MAKE_FRIEND SUPPLY CONSTRUCT EXTORT POLICY':\n>>>")
+            try:
+                action_input = int(action_input)
+                return dict_i_a[action_input]
+            except:
+                try:
+                    if not Action[action_input] in state.actions():
+                        print("please input valid action")
+                        continue
+                except:
+                    print("please input valid action")
+                    continue
+            target = input("input target nation index: \n>>>")
+            target = None if target == "" else int(target)
+            return (Action[action_input], target)
 
 class AIPlayer(Player):
     '''
