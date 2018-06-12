@@ -1,7 +1,16 @@
 import math
 import enum
+
+from action_effect import export_effect
+
 from itertools import chain as original_chain
-chain = lambda l: list(original_chain.from_iterable(l))
+import random
+from AIAlgo import SimpleAlgo, Beam, MCTS
+random.seed(1)
+
+def chain(l):
+    return list(original_chain.from_iterable(l))
+
 
 def clone(o):
     if type(o) is dict:
@@ -13,6 +22,8 @@ def clone(o):
 def in_range(n, r):
     a, b = r if r[0] < r[1] else (r[1], r[0])
     return max(a, min(b, n))
+
+
 class Nation(object):
     """
         >>> n = Nation(args={'p':123, 'a':0.5, 'r':[0, -1, 1, None, 1]})
@@ -29,6 +40,10 @@ class Nation(object):
         for p in self.PROPERTYS:
             if not hasattr(self, p):
                 setattr(self, p, 0)
+        self.parameter_check()
+    def change(self, args):
+        return Nation(self, args)
+    def parameter_check(self):
         for i, r in enumerate(self.r):
             self.r[i] = in_range(r, (-1, 1))
         self.r[self.idx] = 0
@@ -49,7 +64,7 @@ class Nation(object):
         ga, gb, gc = [self.PARAMS[k] for k in ['a', 'b', 'c']]
         nis, nms = ([n.i for n in nations], [n.m for n in nations])
         m1 = m + e * a
-        return Nation(n=self, args={
+        return self.change({
             'in_war': False,
             'e': e * (1 - a) * (1 + i + t) if not in_war else e,
             'm': m + e * a,
@@ -57,21 +72,12 @@ class Nation(object):
             'p': m1 + gc * sum([_r * _d * _m for _r, _d, _m in self.others(ns, zip(r, d, nms))])
         })
 
-from action_effect import DefaultEffect
-
 Action = enum.Enum('Action', 'INVADE DENOUNCE MAKE_FRIEND SUPPLY CONSTRUCT EXTORT POLICY')
-
 
 class State:
     INVADE_B = -1
 
-    invade = DefaultEffect.invade
-    denounce = DefaultEffect.denounce
-    make_friend = DefaultEffect.make_friend
-    supply = DefaultEffect.supply
-    construct = DefaultEffect.construct
-    extort = DefaultEffect.extort
-    policy = DefaultEffect.policy
+    action_function = {k: export_effect[k.name.lower()] for k in Action }
 
     def __init__(self, state=None, args={}):
         """
@@ -114,18 +120,15 @@ class State:
         nations = new_state.nations
         """doing action to update nations"""
         self.performed_action = action
-        action, tar = action
+        action, arg = action
         src = self.now_player_i
-        for _action in Action:
-            if action == _action:
-                action_function = getattr(self, action.name.lower())
-                action_function(nations, src, tar)
-        if not action in Action:
-            raise Exception('Not valid action: ' + str(action))
+        self.action_function[action](nations, src, arg)
         nations[src] = nations[src].updated(nations)
         while True:
             new_state.now_player_i = (new_state.now_player_i + 1) % len(new_state.nations)
-            if not nations[new_state.now_player_i].die: break
+            # print(nations[new_state.now_player_i])
+            if not nations[new_state.now_player_i].die: 
+                break
         return new_state
     def actions(self):
         """
@@ -160,7 +163,7 @@ class Game:
             act = p.action(self.state)
             print(self.state.show())
             self.state = self.state.next_turn(act)
-            print('After player ' + p.name + ' did ' + str(act))
+            print('After player_' + str(p.idx) + " " + p.name + ' did ' + str(act))
             print(self.state.show())
             print()
             input()
@@ -179,6 +182,38 @@ class Player:
     def action(self, state):
         raise NotImplementedError("To be implemented QAQ")
 
+class HumanPlayer(Player):
+    '''
+    '''
+    def __init__(self, ai_name, h):
+        self.ai_name = ai_name
+        self.algo = algo
+        self._h = h
+    def h(self, state, last_action):
+        return self._h(self, state, last_action)
+    @property
+    def name(self):
+        return 'CPU:'+self.ai_name
+    def action(self, state):
+        while True:
+            dict_i_a = dict(list(enumerate(state.actions())))
+            print("valid actions:")
+            print(dict_i_a)
+            action_input = input("plz input one action index or one action from 'INVADE DENOUNCE MAKE_FRIEND SUPPLY CONSTRUCT EXTORT POLICY':\n>>>")
+            try:
+                action_input = int(action_input)
+                return dict_i_a[action_input]
+            except:
+                try:
+                    if not Action[action_input] in state.actions():
+                        print("please input valid action")
+                        continue
+                except:
+                    print("please input valid action")
+                    continue
+            target = input("input target nation index: \n>>>")
+            target = None if target == "" else int(target)
+            return (Action[action_input], target)
 
 class AIPlayer(Player):
     '''
@@ -206,44 +241,20 @@ class AIPlayer(Player):
     def action(self, state):
         return self.algo.get_action(state)
 
-class AIAlgo:
-    def get_action(self, state):
-        raise NotImplementedError("To be implemented (´・ω・`)")
-
-class SimpleAlgo(AIAlgo):
-    def get_action(self, state):
-        from random import sample
-        return sample(state.actions(), 1)[0]
-class Beam(AIAlgo):
-    '''
-    (*ﾟ∀ﾟ*)
-    duckingod
-    RRRRRRRRR
-    da'shen'hao'shen
-    '''
-    def __init__(self, topk=20, turns=30):
-        self.topk = topk
-        self.turns = turns
-    def get_action(self, state):
-        player = state.now_player
-        states = [(state.next_turn(a), None, a) for a in state.actions() ]
-        for i in range(self.turns):
-            p = states[0][0].now_player
-            states = chain([[(s.next_turn(a), a, original_a) for a in s.actions()] for s, _, original_a in states])
-            states.sort(key=lambda s: -p.h(s[0], s[1]))
-            states = states[:self.topk]
-        return max(states, key=lambda s: player.h(s[0], s[2]))[2] # Bug! s[2] is not correct QQ
-
 def simple_h(player, state, action_taken):
     n = state.nations[player.idx]
-    return n.e + n.m
+    # return n.e + n.m
+    return n.e 
 
 if __name__=='__main__':
-    algo = Beam
+    # algo = Beam
+    algo = MCTS
+
     players = [
         AIPlayer('Alice', algo(), simple_h),
         AIPlayer('Bob', algo(), simple_h),
-        AIPlayer('Carol', algo(), simple_h)
+        # AIPlayer('Carol', algo(), simple_h),
+        HumanPlayer('xxxx', simple_h)
         ]
     dist = [
             [0, 0.7, 0.5],
