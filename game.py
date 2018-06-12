@@ -173,9 +173,19 @@ class State:
         else:
             raise Exception('Not valid action: ' + str(action))
         nations[src] = nations[src].updated(nations)
+        print("$$$$$$$$$$$$$$$$$$$$$$")
+        cnt = 0
         while True:
             new_state.now_player_i = (new_state.now_player_i + 1) % len(new_state.nations)
-            if not nations[new_state.now_player_i].die: break
+            print(nations[new_state.now_player_i])
+            if not nations[new_state.now_player_i].die: 
+                # print("@@@@@@@@@@@@@@@@@@@")
+                break
+            cnt = cnt + 1
+            if cnt >= 3:
+                print('dead zooooone')
+                break
+            print(new_state.now_player_i)
         return new_state
     def actions(self):
         """
@@ -206,6 +216,7 @@ class Game:
             p.idx = i
     def run(self, n_turns=200):
         for t in range(n_turns):
+            # print(t)
             p = self.state.now_player
             act = p.action(self.state)
             print(self.state.show())
@@ -296,7 +307,7 @@ class MCTS(AIAlgo):
             self.player = player
             self.parent_action = parent_action
             self.child_nodes = []
-    def __init__(self, turns=50, iter_n=9999):
+    def __init__(self, turns=50, iter_n=9):
         """ 
         turns: depth of Tree
         iter_n: random simulation times
@@ -315,6 +326,7 @@ class MCTS(AIAlgo):
     def simulation(self, node):
         state = node.state
         for i in range(self.turns):
+            print(i)
             state = state.next_turn(random.choice(node.state.actions()))
             # print(state.nations[state.now_player_i])
         return state
@@ -328,6 +340,7 @@ class MCTS(AIAlgo):
     def get_action(self, state):
         self.root = self.mcts_node(state=state)
         for i in range(self.iter_n):
+            print(i)
             node_select= self.selection(self.root)
             node_new = self.expansion(node_select)
             state_final = self.simulation(node_new)
@@ -340,16 +353,8 @@ def simple_h(player, state, action_taken):
     return n.e + n.m
 
 if __name__=='__main__':
-    # players = [
-    #     AIPlayer('Alice', Beam(), simple_h),
-    #     AIPlayer('Bob', Beam(), simple_h),
-    #     AIPlayer('Carol', Beam(), simple_h)
-    #     ]
-    players = [
-        AIPlayer('Alice', MCTS(), simple_h),
-        AIPlayer('Bob', MCTS(), simple_h),
-        AIPlayer('Carol', MCTS(), simple_h)
-    algo = Beam
+    # algo = Beam
+    algo = MCTS
     players = [
         AIPlayer('Alice', algo(), simple_h),
         AIPlayer('Bob', algo(), simple_h),
