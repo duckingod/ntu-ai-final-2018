@@ -33,6 +33,8 @@ class Nation(object):
             self.r[i] = in_range(r, (-1, 1))
         self.r[self.idx] = 0
         self.a = in_range(self.a, (0, 1))
+        for p in ['e', 'm', 'i', 'p']: # make these greater than zero
+            setattr(self, p, max(0, getattr(self, p)))
     def __str__(self):
         return 'Nation: ' + {p:getattr(self, p) for p in self.PROPERTYS}.__str__()
     def __repr__(self):
@@ -55,34 +57,22 @@ class Nation(object):
             'p': m1 + gc * sum([_r * _d * _m for _r, _d, _m in self.others(ns, zip(r, d, nms))])
         })
 
+from action_effect import DefaultEffect
 
-
-
-"""
-| Nation | $n_i$ |
-|--------|-------|
-| Nation power: | $p_i=a_i\lambda_{power} \sum r_{ij}d_{ij}p_j + p_i + rand$ (next turn) |
-| Military power: | $m_i = (1-a_i)p_i$ |
-| Nation relation (not sym) | $r_{ij}$ |
-| Nation Status of $n_i$ | $s_i = \{c_j\}$|
-| Distance | $d_{ij}$ |
-| Affair Ratio | $a_i$ |
-"""
-
-"""
-class Action(enum.Enum):
-    INVADE = 'invade'
-    DENOUNCE = 'denounce'
-    MAKE_FRIEND = 'make_friend'
-    SUPPLY = 'supply'
-    CONSTRUCT = 'construct'
-    EXTORT = 'extort'
-    POLICY = 'policy'
-"""
 Action = enum.Enum('Action', 'INVADE DENOUNCE MAKE_FRIEND SUPPLY CONSTRUCT EXTORT POLICY')
+
 
 class State:
     INVADE_B = -1
+
+    invade = DefaultEffect.invade
+    denounce = DefaultEffect.denounce
+    make_friend = DefaultEffect.make_friend
+    supply = DefaultEffect.supply
+    construct = DefaultEffect.construct
+    extort = DefaultEffect.extort
+    policy = DefaultEffect.policy
+
     def __init__(self, state=None, args={}):
         """
         小魯來惹(｡◕∀◕｡)
@@ -126,48 +116,11 @@ class State:
         self.performed_action = action
         action, tar = action
         src = self.now_player_i
-        src_n, tar_n = nations[src], (nations[tar] if action != Action.CONSTRUCT else None)
-        if action == Action.INVADE:
-            win, lose = (src, tar) if src_n.m > tar_n.m else (tar, src)
-            wn, ln = nations[win], nations[lose]
-            pw, pl = wn.m, ln.m
-            el = ln.e
-            wr, lr = pw / (pw + pl + 1), pl / (pw + pl + 1)
-            nations[win] = Nation(wn, {'in_war': True, 'e': wn.e + el * wr / 2, 'm': wn.m - lr * pl})
-            if ln.e - el * wr / 2 < ln.e0:
-                nations[lose] = Nation(ln, {'die': True, 'd': [0] * len(nations)})
-            else:
-                nations[lose] = Nation(wn, {'in_war': True, 'e': ln.e - el * wr / 2, 'm': ln.m - wr * pl})
-        elif action == Action.DENOUNCE:
-            nations[src] = Nation(src_n, {'r': [r if i!=tar else r - (2-r) * 0.1 for i, r in enumerate(src_n.r)]})
-            nations[tar] = Nation(tar_n, {'r': [r - (2 - r) * (0.05 if i!=src else 0.1) for i, r in enumerate(tar_n.r)]})
-        elif action == Action.MAKE_FRIEND:
-            nations[src] = Nation(src_n, {'r': [r if i!=tar else r + (2+r) * 0.1 for i, r in enumerate(src_n.r)]})
-            nations[src] = Nation(src_n, {'r': [r if i!=src else r + (2+r) * 0.1 for i, r in enumerate(src_n.r)]})
-        elif action == Action.SUPPLY:
-            nations[src] = Nation(src_n, {
-                'e': src_n.e - (1 - src_n.a) * src_n.i,
-                'r': [r if i!=tar else r + (2+r) * 0.2 for i, r in enumerate(src_n.r)]
-                })
-            nations[tar] = Nation(tar_n, {
-                'e': tar_n.e + (1 - src_n.a) * src_n.i,
-                'r': [r if i!=src else r + (2+r) * 0.2 for i, r in enumerate(tar_n.r)]
-                })
-        elif action == Action.EXTORT:
-            nations[src] = Nation(src_n, {
-                'e': src_n.e + (1 - src_n.a) * src_n.i,
-                'r': [r if i!=tar else r - (2-r) * 0.2 for i, r in enumerate(src_n.r)]
-                })
-            nations[tar] = Nation(tar_n, {
-                'e': tar_n.e - (1 - src_n.a) * src_n.i,
-                'r': [r if i!=src else r - (2-r) * 0.2 for i, r in enumerate(tar_n.r)]
-                })
-        elif action == Action.CONSTRUCT:
-            i = src_n.i
-            nations[src] = Nation(src_n, {'i': i + 0.1 * ((0.2-i) if i < 1 else 1)})
-        elif action == Action.POLICY:
-            nations[src] = Nation(src_n, {'a': src_n.a + 0.1 * tar})
-        else:
+        for _action in Action:
+            if action == _action:
+                action_function = getattr(self, action.name.lower())
+                action_function(nations, src, tar)
+        if not action in Action:
             raise Exception('Not valid action: ' + str(action))
         nations[src] = nations[src].updated(nations)
         while True:
@@ -293,19 +246,20 @@ if __name__=='__main__':
         AIPlayer('Carol', algo(), simple_h)
         ]
     dist = [
-            [0, 0.5, 0.3],
-            [0.5, 0, 0.5],
-            [0.3, 0.5, 0]
+            [0, 0.7, 0.5],
+            [0.7, 0, 0.7],
+            [0.5, 0.7, 0]
             ]
     relations = [
             [0, 1, -1],
             [1, 0, 0],
             [-1, 0, 0]
             ]
+    relations = [[0,0,0], [0,0,0], [0,0,0]]
     nation_props = [
             {'e': 10, 'e0': 10, 'm': 10, 'i': 0.2, 'a': 0.25},
             {'e': 20, 'e0': 20, 'm': 6,  'i': 0.3, 'a': 0.0},
-            {'e': 3, 'e0': 3, 'm': 6, 'i':   0.4, 'a': 0.25}
+            {'e': 3,  'e0': 3,  'm': 6,  'i': 0.4, 'a': 0.25}
             ]
     for i, np in enumerate(nation_props):
         np.update({'idx': i, 'r': relations[i], 'd': dist[i], 'die': False})
