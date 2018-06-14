@@ -3,13 +3,9 @@ import enum
 
 from action_effect import export_effect
 
-from itertools import chain as original_chain
 import random
 from AIAlgo import SimpleAlgo, Beam, MCTS
 random.seed(1)
-
-def chain(l):
-    return list(original_chain.from_iterable(l))
 
 
 def clone(o):
@@ -34,7 +30,7 @@ class Nation(object):
     def __init__(self, n=None, args={}):
         if n is not None:
             for p in self.PROPERTYS:
-                setattr(self, p, clone(getattr(n, p)))
+                setattr(self, p, getattr(n, p))
         for p, v in args.items():
             setattr(self, p, clone(v))
         for p in self.PROPERTYS:
@@ -47,6 +43,7 @@ class Nation(object):
         for i, r in enumerate(self.r):
             self.r[i] = in_range(r, (-1, 1))
         self.r[self.idx] = 0
+        self.d[self.idx] = 0
         self.a = in_range(self.a, (0, 1))
         for p in ['e', 'm', 'i', 'p']: # make these greater than zero
             setattr(self, p, max(0, getattr(self, p)))

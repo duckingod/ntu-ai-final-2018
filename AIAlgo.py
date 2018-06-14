@@ -1,5 +1,8 @@
 import random
 
+from itertools import chain as original_chain
+def chain(l):
+    return list(original_chain.from_iterable(l))
 
 class AIAlgo:
     def get_action(self, state):
@@ -22,11 +25,22 @@ class Beam(AIAlgo):
     def get_action(self, state):
         player = state.now_player
         states = [(state.next_turn(a), None, a) for a in state.actions() ]
-        for i in range(self.turns):
-            p = states[0][0].now_player
-            states = chain([[(s.next_turn(a), a, original_a) for a in s.actions()] for s, _, original_a in states])
-            states.sort(key=lambda s: -p.h(s[0], s[1]))
-            states = states[:self.topk]
+        player_i = state.now_player_i
+        n_player = len(state.players)
+        for i in range(self.turns // n_player):
+            for j in range(1, n_player): # 1 because state of this player has been expanded above
+                now_player = state.players[(player_i + j) % n_player]
+                new_states, pass_states = [], []
+                for s, _, original_a in states:
+                    if s.now_player == now_player:
+                        new_states.append([(s.next_turn(a), a, original_a) for a in s.actions()])
+                    else:
+                        pass_states.append((s, None, original_a))
+                new_states = chain(new_states)
+                new_states.sort(key=lambda s: -now_player.h(s[0], s[1]))
+                # make 'passed turn' be in top k
+                # that is, maintain he 'cannot do anything and pass the turn'
+                states = (pass_states + new_states)[:self.topk]
         return max(states, key=lambda s: player.h(s[0], s[2]))[2] # Bug! s[2] is not correct QQ
 class MCTS(AIAlgo):
     class mcts_node(object):
