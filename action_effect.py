@@ -27,19 +27,22 @@ class DefaultEffect():
     def invade(nations, src, tar):
         src_n, tar_n = nations[src], nations[tar]
         d = src_n.d[tar]
-        ap, dp = src_n.p * d, tar_n.p
+        ap, dp = src_n.p * (1-0.2*d), tar_n.p
         r = ap / (ap+dp+0.01)
         if ap > dp:
             e_loss = ap * r / 2
+            nations[src] = src_n.change({'m': src_n.m - tar_n.m * (1 - r) })
             if tar_n.e - e_loss < tar_n.e0:
                 nations[tar] = tar_n.change({'die': True, 'd': [0] * len(nations)})
             else:
                 nations[tar] = tar_n.change( {'m': tar_n.m - tar_n.m * r, 'e': tar_n.e - e_loss})
-            nations[src] = src_n.change({'m': src_n.m - tar_n.m * (1 - r) / d, 'e': src_n.e + e_loss})
+            nations[src] = src_n.change({'e': src_n.e + e_loss})
         else:
-            e_loss = ap * r / 4
-            nations[tar] = tar_n.change({'m': tar_n.m + tar_n.m * (1 - r)})
-            nations[src] = src_n.change({'m': src_n.m - tar_n.m * (1 - r) / d})
+            nations[tar] = tar_n.change({'m': tar_n.m - src_n.m * r})
+            nations[src] = src_n.change({'m': src_n.m - src_n.m * (1 - r)})
+            m_loss = src_n.m * (1 - r)
+            nations[src] = src_n.change({'m': src_n.m - m_loss})
+            nations[tar] = tar_n.change({'m': tar_n.m + m_loss})
 
     @staticmethod
     def denounce(nations, src, tar):

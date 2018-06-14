@@ -30,7 +30,7 @@ class Beam(AIAlgo):
         return max(states, key=lambda s: player.h(s[0], s[2]))[2] # Bug! s[2] is not correct QQ
 class MCTS(AIAlgo):
     class mcts_node(object):
-        def __init__(self, total_score=0.5, visit_n=1, state=None, parent=None, player=None, parent_action=None):
+        def __init__(self, total_score=2, visit_n=1, state=None, parent=None, player=None, parent_action=None):
             """ set init visit_n=1 to avoid division by zero 
             set init total_score=0.5 to encourage discover new node
             """
@@ -41,7 +41,7 @@ class MCTS(AIAlgo):
             self.player = player
             self.parent_action = parent_action
             self.child_nodes = []
-    def __init__(self, turns=50, iter_n=99):
+    def __init__(self, turns=50, iter_n=999):
         """ 
         turns: depth of Tree
         iter_n: random simulation times
@@ -66,12 +66,15 @@ class MCTS(AIAlgo):
     def backpropagation(self, state, node):
         while node.parent:
             """FIXME"""
-            node.total_score += node.player.h(state, None) #""" what is h look like???"""
+            node.total_score += node.player.h(state, None) / self.dict_player_init_h[node.player.idx] #""" what is h look like???"""
             node.visit_n += 1
             node = node.parent
         return None
     def get_action(self, state):
         self.root = self.mcts_node(state=state)
+        self.dict_player_init_h = {player.idx:player.h(state, None) for player in state.players }
+        print(self.dict_player_init_h)
+        # [player.h(player, state) for player in state.players]
         for i in range(self.iter_n):
             node_select= self.selection(self.root)
             node_new = self.expansion(node_select)
