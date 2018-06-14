@@ -44,7 +44,7 @@ class Beam(AIAlgo):
         return max(states, key=lambda s: player.h(s[0], s[2]))[2] # Bug! s[2] is not correct QQ
 class MCTS(AIAlgo):
     class mcts_node(object):
-        def __init__(self, total_score=5, visit_n=1, state=None, parent=None, player=None, parent_action=None):
+        def __init__(self, total_score=3, visit_n=1, state=None, parent=None, player=None, parent_action=None):
             """ set init visit_n=1 to avoid division by zero 
             set init total_score=0.5 to encourage discover new node
             """
@@ -55,7 +55,7 @@ class MCTS(AIAlgo):
             self.player = player
             self.parent_action = parent_action
             self.child_nodes = []
-    def __init__(self, turns=10, iter_n=999):
+    def __init__(self, turns=15, iter_n=999):
         """ 
         turns: depth of Tree
         iter_n: random simulation times

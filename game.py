@@ -259,8 +259,8 @@ if __name__=='__main__':
         AIPlayer('Alice', algo(), simple_h),
         # HumanPlayer('human', simple_h),
         AIPlayer('Bob', algo(), simple_h),
-        AIPlayer('Carol', algo(), simple_h),
-        # HumanPlayer('human', simple_h)
+        # AIPlayer('Carol', algo(), simple_h),
+        HumanPlayer('human', simple_h)
         ]
     dist = [
             [0, 0.7, 0.5],
