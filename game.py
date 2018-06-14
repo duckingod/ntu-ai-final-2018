@@ -239,9 +239,17 @@ class AIPlayer(Player):
         return self.algo.get_action(state)
 
 def simple_h(player, state, action_taken):
+    # print(player)
+    # print(player.idx)
     n = state.nations[player.idx]
     # return n.e + n.m
-    return n.e 
+    # neg = 0
+    # for n_tmp in state.nations:
+    #     if n_tmp != n:
+    #         neg += n_tmp.e + n_tmp.m
+    # print(n.e + n.m)
+    # print(n.m)
+    return n.e + n.m
 
 if __name__=='__main__':
     # algo = Beam
@@ -249,6 +257,7 @@ if __name__=='__main__':
 
     players = [
         AIPlayer('Alice', algo(), simple_h),
+        # HumanPlayer('human', simple_h),
         AIPlayer('Bob', algo(), simple_h),
         AIPlayer('Carol', algo(), simple_h),
         # HumanPlayer('human', simple_h)
@@ -267,7 +276,7 @@ if __name__=='__main__':
     nation_props = [
             {'e': 10, 'e0': 10, 'm': 10, 'i': 0.2, 'a': 0.25},
             {'e': 20, 'e0': 20, 'm': 6,  'i': 0.3, 'a': 0.0},
-            {'e': 3,  'e0': 3,  'm': 6,  'i': 0.4, 'a': 0.25}
+            {'e': 10,  'e0': 10,  'm': 10,  'i': 0.4, 'a': 0.25}
             ]
     for i, np in enumerate(nation_props):
         np.update({'idx': i, 'r': relations[i], 'd': dist[i], 'die': False})
