@@ -256,8 +256,11 @@ def simple_h_em(player, state, action_taken):
 
 if __name__=='__main__':
     import init_config
-    algo = lambda: Beam(2000, 20)
-    players, initial_state = init_config.duck(algo)
+    # algo = lambda: Beam(2000, 20)
+    # players, initial_state = init_config.duck(algo)
+    algo = lambda: MCTS(turns=15, iter_n=99)
+    players, initial_state = init_config.xogo(algo)
+    
     game = Game(players, initial_state)
     game.run()
 

@@ -66,6 +66,13 @@ class MCTS(AIAlgo):
         while node.child_nodes:
             """ maybe need to deal with dead nation situation later
             """
+            scores = [child_node.total_score / child_node.visit_n for child_node in node.child_nodes if child_node.visit_n > 1]
+            mean_score = sum(scores) / len(scores)
+            for child_node in node.child_nodes:
+                if child_node.visit_n <= 1 :
+                    child_node.total_score = mean_score
+            scores = [child_node.total_score / child_node.visit_n for child_node in node.child_nodes]
+            node = ramdom.choices(node.child_nodes, scores)
             node = max(node.child_nodes, key=lambda child_node: ( (0+child_node.total_score) / child_node.visit_n) )
         return node
     def expansion(self, node):
@@ -81,31 +88,14 @@ class MCTS(AIAlgo):
     def backpropagation(self, state, node):
         while node.parent:
             """FIXME"""
-            node.total_score += node.parent.player.h(state, None) / self.dict_player_init_h[node.parent.player.idx] #""" what is h look like???"""
-            # if node.parent.player.h(state, None) / self.dict_player_init_h[node.parent.player.idx] > 1:
-            #     print(state)
-            #     print(node.parent.player.h(state, None) / self.dict_player_init_h[node.parent.player.idx])
+            node.total_score += node.parent.player.h(state) / self.dict_player_init_h[node.parent.player.idx]
             node.visit_n += 1
             node = node.parent
         return None
     def get_action(self, state):
         self.root = self.mcts_node(state=state, parent=None, player=state.now_player, parent_action=None)
-        self.dict_player_init_h = {player.idx:player.h(state, None) for player in state.players }
-        # print(self.dict_player_init_h)
-        # [player.h(player, state) for player in state.players]
+        self.dict_player_init_h = {player.idx:player.h(state) for player in state.players }
         for i in range(self.iter_n):
-            # print(i)
-            # print(self.root.player.idx)
-            # for child_node in self.root.child_nodes:
-                # print(child_node.visit_n)
-                # if (0+child_node.total_score) / child_node.visit_n > 1000:
-                #     print((0+child_node.total_score) / child_node.visit_n)
-                #     print(child_node.parent.player.h(state_final, None))
-                #     print(child_node.visit_n)
-                #     print(child_node.state)
-                #     print(state_final)
-
-                # print (self.dict_player_init_h[child_node.parent.player.idx])
             node_select= self.selection(self.root)
             node_new = self.expansion(node_select)
             state_final = self.simulation(node_new)
