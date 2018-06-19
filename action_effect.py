@@ -32,11 +32,11 @@ class DefaultEffect():
         if ap > dp:
             e_loss = ap * r / 2
             nations[src] = src_n.change({'m': src_n.m - tar_n.m * (1 - r) })
-            if tar_n.e - e_loss < tar_n.e0:
-                nations[tar] = tar_n.change({'die': True, 'd': [0] * len(nations)})
+            if tar_n.e - e_loss < tar_n.e0 / 4:
+                nations[tar] = tar_n.change({'die': True, 'd': [0] * len(nations), 'm': tar_n.m - tar_n.m * r, 'e': tar_n.e - e_loss})
             else:
                 nations[tar] = tar_n.change( {'in_war': True, 'm': tar_n.m - tar_n.m * r, 'e': tar_n.e - e_loss})
-            nations[src] = src_n.change({'in_war': True, 'm': src_n.m - tar_n.m * (1 - r) / d, 'e': src_n.e + e_loss})
+            nations[src] = src_n.change({'in_war': True, 'm': src_n.m - tar_n.m * (1 - r) / d, 'e': src_n.e + e_loss / 2})
         else:
             e_loss = ap * r / 4
             nations[tar] = tar_n.change({'in_war': True, 'm': tar_n.m + tar_n.m * (1 - r)})
@@ -131,9 +131,9 @@ def invade_e0(nations, src, tar):
     td = {'in_war': True, 'r': [-1 if i==src else _r for i, _r in enumerate(tar_n.r)]}
     if ap > dp:
         e_loss = tar_n.e * r / 2
-        if tar_n.e - e_loss < tar_n.e0:
+        if tar_n.e - e_loss < tar_n.e0 / 4:
             sd.update({'e0': src_n.e0 + tar_n.e0, 'd': [max(t) for t in zip(src_n.d, tar_n.d)]})
-            td.update({'die': True, 'd': [0] * len(nations)})
+            td.update({'die': True, 'd': [0] * len(nations), 'm': tar_n.m - tar_n.m * r, 'e': tar_n.e - e_loss})
         else:
             td.update({'m': tar_n.m - tar_n.m * r, 'e': tar_n.e - e_loss})
         sd.update({'m': src_n.m - tar_n.m * (1 - r), 'e': src_n.e + e_loss})

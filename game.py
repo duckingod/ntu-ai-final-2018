@@ -64,7 +64,7 @@ class Nation(object):
         return self.change({
             'in_war': False,
             'e': e * max(1, (1 - a) * (1 + i + t) / math.exp(0.01 * (e/e0-1))) if not in_war else e,
-            'm': m + e * a,
+            'm': m + e * a if not in_war else m,
             't': ga * sum([_r * _d * _i for _r, _d, _i in self.others(ns, zip(r, d, nis))]) + gb,
             'p': m1 + gc * sum([_r * _d * _m for _r, _d, _m in self.others(ns, zip(r, d, nms))])
         })
