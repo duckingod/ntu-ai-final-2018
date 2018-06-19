@@ -55,7 +55,7 @@ class MCTS(AIAlgo):
             self.player = player
             self.parent_action = parent_action
             self.child_nodes = []
-    def __init__(self, turns=15, iter_n=999):
+    def __init__(self, turns=15, iter_n=99):
         """ 
         turns: depth of Tree
         iter_n: random simulation times
@@ -74,6 +74,7 @@ class MCTS(AIAlgo):
     def simulation(self, node):
         state = node.state
         for i in range(self.turns):
+            # print(i)
             state = state.next_turn(random.choice(state.actions()))
             # print(state.nations[state.now_player_i])
         return state
@@ -81,6 +82,9 @@ class MCTS(AIAlgo):
         while node.parent:
             """FIXME"""
             node.total_score += node.parent.player.h(state, None) / self.dict_player_init_h[node.parent.player.idx] #""" what is h look like???"""
+            # if node.parent.player.h(state, None) / self.dict_player_init_h[node.parent.player.idx] > 1:
+            #     print(state)
+            #     print(node.parent.player.h(state, None) / self.dict_player_init_h[node.parent.player.idx])
             node.visit_n += 1
             node = node.parent
         return None
@@ -92,9 +96,16 @@ class MCTS(AIAlgo):
         for i in range(self.iter_n):
             # print(i)
             # print(self.root.player.idx)
-            for child_node in self.root.child_nodes:
+            # for child_node in self.root.child_nodes:
                 # print(child_node.visit_n)
-                print((0+child_node.total_score) / child_node.visit_n)
+                # if (0+child_node.total_score) / child_node.visit_n > 1000:
+                #     print((0+child_node.total_score) / child_node.visit_n)
+                #     print(child_node.parent.player.h(state_final, None))
+                #     print(child_node.visit_n)
+                #     print(child_node.state)
+                #     print(state_final)
+
+                # print (self.dict_player_init_h[child_node.parent.player.idx])
             node_select= self.selection(self.root)
             node_new = self.expansion(node_select)
             state_final = self.simulation(node_new)
