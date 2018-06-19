@@ -18,16 +18,17 @@ def sn(player, state):
 
 @extract
 def died(state, n, action, src, tar):
-    return -1000000000 if n.die else 0
+    return -1000000 if n.die else 0
 
 def common(a, p):
     @extract
     def _common(state, n, action, src, tar):
-        # power = n.m + (n.p - n.m) * 0.5)
+        # power = n.m + (n.p - n.m) * 0.5
+        power = n.m
         if p=='f':
-            return log(n.e + n.m + 0.1)
+            return log(n.e + power + 0.1)
         if p=='m':
-            return log(n.e + 0.1) + log(n.m + 0.1)
+            return log(n.e + power + 0.1) + log(power + 0.1)
         if p=='b':
             return log(n.e + 0.1)
         if p=='old':
@@ -66,9 +67,21 @@ def diplomatic(a, p):
         raise Exception('Unknown personality: ' + p)
     return _dip
 
+def love_union(a, p):
+    @extract
+    def _dip(state, n, action, src, tar):
+        is_die = lambda n: not n.die
+        if p=='':
+            return 0
+        elif p=='love':
+            return - a * len(list(filter(is_die, state.nations)))
+        elif p=='hate':
+            return a * len(list(filter(is_die, state.nations)))
+        raise Exception('Unknown personality: ' + p)
+    return _dip
 
-def get_h(personality=['f', '', 'tao'], params=[None, 0.5, 1]):
-    fs = [common, invade, diplomatic]
+def get_h(personality=['f', '', 'tao', 'love'], params=[None, 0.5, 1, 10]):
+    fs = [common, invade, diplomatic, love_union]
     fs = [f(a, p) for f, p, a in zip(fs, personality, params)]
     fs.append(died)
     def compute(player, state, action):

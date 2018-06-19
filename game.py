@@ -26,7 +26,7 @@ class Nation(object):
         >>> new_n = Nation(n) # Copy nation
     """
     PROPERTYS = ['idx', 'die', 'in_war', 'e', 'e0', 'm', 't', 'i', 'a', 'p', 'r', 'd']
-    PARAMS = {'a': 0.5, 'b': 0, 'c': 1, 'd':0.1, 'e':0.4}
+    PARAMS = {'a': 0.5, 'b': 0, 'c': 0.3, 'd':0.1, 'e':0.4}
     def __init__(self, n=None, args={}):
         if n is not None:
             for p in self.PROPERTYS:
