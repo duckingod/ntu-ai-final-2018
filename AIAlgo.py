@@ -92,9 +92,9 @@ class MCTS(AIAlgo):
         for i in range(self.iter_n):
             # print(i)
             # print(self.root.player.idx)
-            for child_node in self.root.child_nodes:
+            # for child_node in self.root.child_nodes:
                 # print(child_node.visit_n)
-                print((0+child_node.total_score) / child_node.visit_n)
+            #    print((0+child_node.total_score) / child_node.visit_n)
             node_select= self.selection(self.root)
             node_new = self.expansion(node_select)
             state_final = self.simulation(node_new)

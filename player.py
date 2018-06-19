@@ -6,7 +6,10 @@ def extract(f):
     def _e(player, state, last_action):
         src = player.idx
         n = state.nations[src]
-        action, tar = state.last_state.performed_action
+        if state.last_state:
+            action, tar = state.last_state.performed_action
+        else:
+            action, tar = None, None
         return f(state, n, action, src, tar)
     return _e
 
@@ -20,12 +23,13 @@ def died(state, n, action, src, tar):
 def common(a, p):
     @extract
     def _common(state, n, action, src, tar):
+        # power = n.m + (n.p - n.m) * 0.5)
         if p=='f':
-            return log(n.e + n.m)
+            return log(n.e + n.m + 0.1)
         if p=='m':
-            return log(n.e) + log(n.m)
+            return log(n.e + 0.1) + log(n.m + 0.1)
         if p=='b':
-            return log(n.e)
+            return log(n.e + 0.1)
         if p=='old':
             return n.e + n.m
         raise Exception('Unknown personality: ' + p)
@@ -63,7 +67,7 @@ def diplomatic(a, p):
     return _dip
 
 
-def get_h(personality=['f', 'hate', 'mod'], params=[None, 0.5, 1]):
+def get_h(personality=['f', '', 'tao'], params=[None, 0.5, 1]):
     fs = [common, invade, diplomatic]
     fs = [f(a, p) for f, p, a in zip(fs, personality, params)]
     fs.append(died)

@@ -42,6 +42,7 @@ class DefaultEffect():
             nations[tar] = tar_n.change({'in_war': True, 'm': tar_n.m + tar_n.m * (1 - r)})
             nations[src] = src_n.change({'in_war': True, 'm': src_n.m - tar_n.m * (1 - r) / d})
 
+        
     @staticmethod
     def denounce(nations, src, tar):
         src_n, tar_n = nations[src], nations[tar]
@@ -67,14 +68,20 @@ class DefaultEffect():
             })
 
     @staticmethod
-    def extort(nations, src, tar):
-        src_n, tar_n = nations[src], nations[tar]
+    def produce(nations, src, tar):
+        src_n = nations[src]
         nations[src] = src_n.change({
-            'e': src_n.e + (1 - src_n.a) * src_n.i,
+            'e': src_n.e * src_n.growth(nations, _a=0),
+            })
+    @staticmethod
+    def extort(nations, src, tar):
+        src_n = nations[src]
+        nations[src] = src_n.change({
+            'e': src_n.e * src_n.growth(a=0),
             'r': [r if i!=tar else r - (2-r) * 0.2 for i, r in enumerate(src_n.r)]
             })
         nations[tar] = tar_n.change({
-            'e': tar_n.e - (1 - src_n.a) * src_n.i,
+            'e': tar_n.e - e_loss,
             'r': [r if i!=src else r - (2-r) * 0.2 for i, r in enumerate(tar_n.r)]
             })
 
@@ -150,7 +157,7 @@ def invade_e0(nations, src, tar):
 
 def policy_strong(nations, src, flag):
     src_n = nations[src]
-    nations[src] = src_n.change({'a': src_n.a + 0.2 * flag - 0.5})
+    nations[src] = src_n.change({'a': src_n.a + 0.2 * flag})
 
 export_effect = {
         'invade': DefaultEffect.invade,
@@ -159,6 +166,7 @@ export_effect = {
         'supply': DefaultEffect.supply,
         'construct': DefaultEffect.construct,
         'extort': DefaultEffect.extort,
+        'produce': DefaultEffect.produce,
         'policy': DefaultEffect.policy
         }
 
