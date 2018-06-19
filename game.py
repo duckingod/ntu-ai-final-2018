@@ -1,7 +1,7 @@
 import math
-import enum
 
 from action_effect import export_effect
+from utils import Action
 
 import random
 from AIAlgo import SimpleAlgo, Beam, MCTS
@@ -52,7 +52,7 @@ class Nation(object):
     def __repr__(self):
         def r_str():
             return ' '.join([f'{r:5.2f}' for r in self.r])
-        return f"{'X' if self.die else 'O'} e:{self.e:7.2f}  m:{self.m:7.2f}  a:{self.a:7.2f}  r: {r_str()}"
+        return f"{'X' if self.die else 'O'} e:{self.e:7.2f}  e0:{self.e0:5.1f}  m:{self.m:7.2f}  p:{self.p:7.2f}  a:{self.a:7.2f}  r: {r_str()}"
     def others(self, nations, targets):
         return [v for i, (n, v) in enumerate(zip(nations, targets)) if i != self.idx and not n.die]
     def updated(self, nations):
@@ -63,13 +63,12 @@ class Nation(object):
         m1 = m + e * a
         return self.change({
             'in_war': False,
-            'e': e * (1 - a) * (1 + i + t) if not in_war else e,
+            'e': e * max(1, (1 - a) * (1 + i + t) / math.exp(0.01 * (e/e0-1))) if not in_war else e,
             'm': m + e * a,
             't': ga * sum([_r * _d * _i for _r, _d, _i in self.others(ns, zip(r, d, nis))]) + gb,
             'p': m1 + gc * sum([_r * _d * _m for _r, _d, _m in self.others(ns, zip(r, d, nms))])
         })
 
-Action = enum.Enum('Action', 'INVADE DENOUNCE MAKE_FRIEND SUPPLY CONSTRUCT EXTORT POLICY')
 
 class State:
     INVADE_B = -1
@@ -184,7 +183,6 @@ class HumanPlayer(Player):
     '''
     def __init__(self, ai_name, h):
         self.ai_name = ai_name
-        self.algo = algo
         self._h = h
     def h(self, state, last_action):
         return self._h(self, state, last_action)
@@ -251,38 +249,15 @@ def simple_h(player, state, action_taken):
     # print(n.m)
     return n.e + n.m
 
-if __name__=='__main__':
-    # algo = Beam
-    algo = MCTS
+def simple_h_em(player, state, action_taken):
+    n = state.nations[player.idx]
+    return n.e + n.m / 3
 
-    players = [
-        AIPlayer('Alice', algo(), simple_h),
-        # HumanPlayer('human', simple_h),
-        AIPlayer('Bob', algo(), simple_h),
-        # AIPlayer('Carol', algo(), simple_h),
-        HumanPlayer('human', simple_h)
-        ]
-    dist = [
-            [0, 0.7, 0.5],
-            [0.7, 0, 0.7],
-            [0.5, 0.7, 0]
-            ]
-    relations = [
-            [0, 1, -1],
-            [1, 0, 0],
-            [-1, 0, 0]
-            ]
-    relations = [[0,0,0], [0,0,0], [0,0,0]]
-    nation_props = [
-            {'e': 10, 'e0': 10, 'm': 10, 'i': 0.2, 'a': 0.25},
-            {'e': 20, 'e0': 20, 'm': 10,  'i': 0.3, 'a': 0.0},
-            {'e': 10,  'e0': 10,  'm': 10,  'i': 0.4, 'a': 0.25}
-            ]
-    for i, np in enumerate(nation_props):
-        np.update({'idx': i, 'r': relations[i], 'd': dist[i], 'die': False})
-    nations = [Nation(args=p) for p in nation_props]
-    nations = [n.updated(nations) for n in nations]
-    initial_state = State(args={'now_player_i': 0, 'players': players, 'nations': nations})
+
+if __name__=='__main__':
+    import init_config
+    algo = lambda: Beam(2000, 20)
+    players, initial_state = init_config.duck(algo)
     game = Game(players, initial_state)
     game.run()
 
