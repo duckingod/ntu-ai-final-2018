@@ -1,0 +1,2 @@
+import enum
+Action = enum.Enum('Action', 'INVADE DENOUNCE MAKE_FRIEND SUPPLY CONSTRUCT EXTORT POLICY')

@@ -1,7 +1,7 @@
 import math
-import enum
 
 from action_effect import export_effect
+from utils import Action
 
 import random
 from AIAlgo import SimpleAlgo, Beam, MCTS
@@ -69,7 +69,6 @@ class Nation(object):
             'p': m1 + gc * sum([_r * _d * _m for _r, _d, _m in self.others(ns, zip(r, d, nms))])
         })
 
-Action = enum.Enum('Action', 'INVADE DENOUNCE MAKE_FRIEND SUPPLY CONSTRUCT EXTORT POLICY')
 
 class State:
     INVADE_B = -1
@@ -257,7 +256,7 @@ def simple_h_em(player, state, action_taken):
 if __name__=='__main__':
     import init_config
     algo = lambda: Beam(2000, 20)
-    players, initial_state = init_config.xogo(algo)
+    players, initial_state = init_config.duck(algo)
     game = Game(players, initial_state)
     game.run()
 
