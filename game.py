@@ -169,10 +169,10 @@ class Player:
     Member:
      - name
      - idx
-     - h(state, last_action)
+     - h(state)
      - action(state)
     '''
-    def h(self, state, action_taken=None):
+    def h(self, state):
         """ hueristic??  """
         raise NotImplementedError("To be implemented duckingod")
     def action(self, state):
@@ -184,8 +184,8 @@ class HumanPlayer(Player):
     def __init__(self, ai_name, h):
         self.ai_name = ai_name
         self._h = h
-    def h(self, state, last_action):
-        return self._h(self, state, last_action)
+    def h(self, state):
+        return self._h(self, state)
     @property
     def name(self):
         return 'CPU:'+self.ai_name
@@ -228,15 +228,15 @@ class AIPlayer(Player):
         self.ai_name = ai_name
         self.algo = algo
         self._h = h
-    def h(self, state, last_action):
-        return self._h(self, state, last_action)
+    def h(self, state):
+        return self._h(self, state)
     @property
     def name(self):
         return 'CPU:'+self.ai_name
     def action(self, state):
         return self.algo.get_action(state)
 
-def simple_h(player, state, action_taken):
+def simple_h(player, state):
     # print(player)
     # print(player.idx)
     n = state.nations[player.idx]
@@ -249,7 +249,7 @@ def simple_h(player, state, action_taken):
     # print(n.m)
     return n.e + n.m
 
-def simple_h_em(player, state, action_taken):
+def simple_h_em(player, state):
     n = state.nations[player.idx]
     return n.e + n.m / 3
 
@@ -257,10 +257,8 @@ def simple_h_em(player, state, action_taken):
 if __name__=='__main__':
     import init_config
     # algo = lambda: Beam(2000, 20)
-    # players, initial_state = init_config.duck(algo)
     algo = lambda: MCTS(turns=15, iter_n=99)
     players, initial_state = init_config.xogo(algo)
-    
     game = Game(players, initial_state)
     game.run()
 

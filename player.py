@@ -3,18 +3,18 @@ from math import log
 from utils import Action
 
 def extract(f):
-    def _e(player, state, last_action):
+    def _e(player, state):
         src = player.idx
         n = state.nations[src]
-        action, tar = last_action
+        if state.last_state:
+            action, tar = state.last_state.performed_action
+        else:
+            action, tar = (None, None)
         return f(state, n, action, src, tar)
     return _e
 
 def sn(player, state):
     return state[player.idx]
-
-def h_template(player, state, last_action):
-    return self._h(self, state, last_action)
 
 @extract
 def died(state, n, action, src, tar):
@@ -69,7 +69,7 @@ def get_h(personality=['f', '', 'tao'], params=[None, 0.5, 1]):
     fs = [common, invade, diplomatic]
     fs = [f(a, p) for f, p, a in zip(fs, personality, params)]
     fs.append(died)
-    def compute(player, state, action):
-        return sum([f(player, state, action) for f in fs])
+    def compute(player, state):
+        return sum([f(player, state) for f in fs])
     return compute
 

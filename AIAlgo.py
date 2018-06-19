@@ -12,6 +12,7 @@ class SimpleAlgo(AIAlgo):
     def get_action(self, state):
         from random import sample
         return sample(state.actions(), 1)[0]
+
 class Beam(AIAlgo):
     '''
     (*ﾟ∀ﾟ*)
@@ -24,24 +25,24 @@ class Beam(AIAlgo):
         self.turns = turns
     def get_action(self, state):
         player = state.now_player
-        states = [(state.next_turn(a), None, a) for a in state.actions() ]
+        states = [(state.next_turn(a), a) for a in state.actions() ]
         player_i = state.now_player_i
         n_player = len(state.players)
         for i in range(self.turns // n_player):
             for j in range(1, n_player): # 1 because state of this player has been expanded above
                 now_player = state.players[(player_i + j) % n_player]
                 new_states, pass_states = [], []
-                for s, _, original_a in states:
+                for s, original_a in states:
                     if s.now_player == now_player:
-                        new_states.append([(s.next_turn(a), a, original_a) for a in s.actions()])
+                        new_states.append([(s.next_turn(a), original_a) for a in s.actions()])
                     else:
-                        pass_states.append((s, None, original_a))
+                        pass_states.append((s, original_a))
                 new_states = chain(new_states)
-                new_states.sort(key=lambda s: -now_player.h(s[0], s[1]))
+                new_states.sort(key=lambda s: -now_player.h(s[0]))
                 # make 'passed turn' be in top k
                 # that is, maintain he 'cannot do anything and pass the turn'
                 states = (pass_states + new_states)[:self.topk]
-        return max(states, key=lambda s: player.h(s[0], s[2]))[2] # Bug! s[2] is not correct QQ
+        return max(states, key=lambda s: player.h(s[0]))[1] # Bug! s[2] is not correct QQ
 class MCTS(AIAlgo):
     class mcts_node(object):
         def __init__(self, total_score=3, visit_n=1, state=None, parent=None, player=None, parent_action=None):
@@ -67,13 +68,13 @@ class MCTS(AIAlgo):
             """ maybe need to deal with dead nation situation later
             """
             scores = [child_node.total_score / child_node.visit_n for child_node in node.child_nodes if child_node.visit_n > 1]
-            mean_score = sum(scores) / len(scores)
+            mean_score = (sum(scores) / len(scores) ) * 0.99
             for child_node in node.child_nodes:
                 if child_node.visit_n <= 1 :
                     child_node.total_score = mean_score
-            scores = [child_node.total_score / child_node.visit_n for child_node in node.child_nodes]
-            node = ramdom.choices(node.child_nodes, scores)
-            node = max(node.child_nodes, key=lambda child_node: ( (0+child_node.total_score) / child_node.visit_n) )
+            scores = [max(child_node.total_score / child_node.visit_n, 0.001) for child_node in node.child_nodes]
+            node = random.choices(node.child_nodes, scores)[0]
+            # node = max(node.child_nodes, key=lambda child_node: ( (0+child_node.total_score) / child_node.visit_n) )
         return node
     def expansion(self, node):
         node.child_nodes = [ self.mcts_node(state=node.state.next_turn(a), parent=node, player=node.state.next_turn(a).now_player, parent_action=a) for a in node.state.actions() ]    
@@ -89,6 +90,7 @@ class MCTS(AIAlgo):
         while node.parent:
             """FIXME"""
             node.total_score += node.parent.player.h(state) / self.dict_player_init_h[node.parent.player.idx]
+
             node.visit_n += 1
             node = node.parent
         return None
