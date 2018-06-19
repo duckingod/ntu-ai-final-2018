@@ -1,4 +1,5 @@
 import random
+import numpy as np
 
 from itertools import chain as original_chain
 def chain(l):
@@ -68,13 +69,11 @@ class MCTS(AIAlgo):
             """ maybe need to deal with dead nation situation later
             """
             scores = [child_node.total_score / child_node.visit_n for child_node in node.child_nodes if child_node.visit_n > 1]
-            mean_score = (sum(scores) / len(scores) ) * 0.99
-            for child_node in node.child_nodes:
-                if child_node.visit_n <= 1 :
-                    child_node.total_score = mean_score
-            scores = [max(child_node.total_score / child_node.visit_n, 0.001) for child_node in node.child_nodes]
-            node = random.choices(node.child_nodes, scores)[0]
-            # node = max(node.child_nodes, key=lambda child_node: ( (0+child_node.total_score) / child_node.visit_n) )
+            mean_score = np.mean(scores)
+            std_score = max(np.std(scores), 1)
+            total_visit_n = sum([child_node.visit_n for child_node in node.child_nodes])
+            scores_normal = [max(np.sqrt((np.log2(total_visit_n)/child_node.visit_n)*2) + (((child_node.total_score - mean_score) / std_score) + 3) / 6, 0.001) for child_node in node.child_nodes]
+            node = random.choices(node.child_nodes, scores_normal)[0]
         return node
     def expansion(self, node):
         node.child_nodes = [ self.mcts_node(state=node.state.next_turn(a), parent=node, player=node.state.next_turn(a).now_player, parent_action=a) for a in node.state.actions() ]    
@@ -82,15 +81,11 @@ class MCTS(AIAlgo):
     def simulation(self, node):
         state = node.state
         for i in range(self.turns):
-            # print(i)
             state = state.next_turn(random.choice(state.actions()))
-            # print(state.nations[state.now_player_i])
         return state
     def backpropagation(self, state, node):
         while node.parent:
-            """FIXME"""
             node.total_score += node.parent.player.h(state) / self.dict_player_init_h[node.parent.player.idx]
-
             node.visit_n += 1
             node = node.parent
         return None
@@ -104,6 +99,3 @@ class MCTS(AIAlgo):
             self.backpropagation(state_final, node_new)
         node_best = max(self.root.child_nodes, key=lambda child_node: child_node.total_score / child_node.visit_n)
         return node_best.parent_action
-        """
-        if lose is doomed, AI may be wrong
-        """
