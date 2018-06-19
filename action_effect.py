@@ -27,10 +27,11 @@ class DefaultEffect():
     def invade(nations, src, tar):
         src_n, tar_n = nations[src], nations[tar]
         d = src_n.d[tar]
-        ap, dp = src_n.p * d, tar_n.p
+        ap, dp = src_n.p * (1-0.2*d), tar_n.p
         r = ap / (ap+dp+0.01)
         if ap > dp:
             e_loss = ap * r / 2
+            nations[src] = src_n.change({'m': src_n.m - tar_n.m * (1 - r) })
             if tar_n.e - e_loss < tar_n.e0:
                 nations[tar] = tar_n.change({'die': True, 'd': [0] * len(nations)})
             else:
