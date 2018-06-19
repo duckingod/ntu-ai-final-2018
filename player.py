@@ -6,15 +6,12 @@ def extract(f):
     def _e(player, state, last_action):
         src = player.idx
         n = state.nations[src]
-        action, tar = last_action
+        action, tar = state.last_state.performed_action
         return f(state, n, action, src, tar)
     return _e
 
 def sn(player, state):
     return state[player.idx]
-
-def h_template(player, state, last_action):
-    return self._h(self, state, last_action)
 
 @extract
 def died(state, n, action, src, tar):
@@ -38,6 +35,7 @@ def invade(a, p):
     @extract
     def _invade(state, n, action, src, tar):
         if action == Action.INVADE:
+            n = state.last_state.nations[src]
             return -a * n.d[tar] * (n.r[tar] - love)
         return 0
     if p == '':
@@ -65,7 +63,7 @@ def diplomatic(a, p):
     return _dip
 
 
-def get_h(personality=['f', '', 'tao'], params=[None, 0.5, 1]):
+def get_h(personality=['f', 'hate', 'mod'], params=[None, 0.5, 1]):
     fs = [common, invade, diplomatic]
     fs = [f(a, p) for f, p, a in zip(fs, personality, params)]
     fs.append(died)

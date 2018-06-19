@@ -82,7 +82,7 @@ class DefaultEffect():
     def construct(nations, src, _):
         i = nations[src].i
         src_n = nations[src]
-        nations[src] = src_n.change({'i': i + 0.1 * ((0.2-i) if i < 1 else 1)})
+        nations[src] = src_n.change({'i': i + 0.1 * ((2-i) if i < 1 else 1)})
 
     @staticmethod
     def policy(nations, src, flag):
@@ -124,7 +124,9 @@ def invade_e0(nations, src, tar):
     src_n, tar_n = nations[src], nations[tar]
     d = src_n.d[tar]
 
-    ap, dp = src_n.p * (0.3 + 0.7 * d), tar_n.p
+    # dr = (0.3 + 0.7 * d)
+    dr = d
+    ap, dp = src_n.p * dr, tar_n.p
     r = ap / (ap+dp+0.01)
 
     sd = {'in_war': True, 'r': [-1 if i==tar else _r for i, _r in enumerate(src_n.r)]}
@@ -136,15 +138,19 @@ def invade_e0(nations, src, tar):
             td.update({'die': True, 'd': [0] * len(nations), 'm': tar_n.m - tar_n.m * r, 'e': tar_n.e - e_loss})
         else:
             td.update({'m': tar_n.m - tar_n.m * r, 'e': tar_n.e - e_loss})
-        sd.update({'m': src_n.m - tar_n.m * (1 - r), 'e': src_n.e + e_loss})
+        sd.update({'m': src_n.m - tar_n.m * (1 - r) / dr, 'e': src_n.e + e_loss * dr})
     else:
         td.update({'m': tar_n.m - src_n.m * r})
         sd.update({'m': src_n.m - src_n.m * (1 - r)})
         m_loss = sd['m'] * (1 - r)
-        sd.update({'m': sd['m'] - m_loss})
+        sd.update({'m': sd['m'] - m_loss / dr})
         td.update({'m': td['m'] + m_loss})
-    nations[src] = src_n.change(sd)
-    nations[tar] = tar_n.change(td)
+    nations[src] = src_n.change(sd).refresh(nations)
+    nations[tar] = tar_n.change(td).refresh(nations)
+
+def policy_strong(nations, src, flag):
+    src_n = nations[src]
+    nations[src] = src_n.change({'a': src_n.a + 0.2 * flag - 0.5})
 
 export_effect = {
         'invade': DefaultEffect.invade,
@@ -159,3 +165,4 @@ export_effect = {
 export_effect['invade'] = invade_v2
 export_effect['invade'] = invade_e0
 
+export_effect['policy'] = policy_strong 

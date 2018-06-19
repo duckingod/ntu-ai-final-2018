@@ -50,9 +50,9 @@ def duck(algo):
             ]
     relations = [[0,0,0], [0,0,0], [0,0,0]]
     nation_props = [
-            {'e': 10, 'e0': 10, 'm': 3, 'i': 0.2, 'a': 0.25},
-            {'e': 20, 'e0': 20, 'm': 4,  'i': 0.3, 'a': 0.0},
-            {'e': 3,  'e0': 3,  'm': 5,  'i': 0.4, 'a': 0.25}
+            {'e': 10, 'e0': 10, 'm': 3, 'i': 0.2, 'a': 0.2},
+            {'e': 20, 'e0': 20, 'm': 4,  'i': 0.3, 'a': 0.1},
+            {'e': 5,  'e0': 3,  'm': 3,  'i': 0.6, 'a': 0.2}
             ]
     for i, np in enumerate(nation_props):
         np.update({'idx': i, 'r': relations[i], 'd': dist[i], 'die': False})
