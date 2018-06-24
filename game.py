@@ -272,10 +272,11 @@ def simple_h_em(player, state):
     n = state.nations[player.idx]
     return n.e + n.m / 3
 
+
 if __name__=='__main__':
     import init_config
     # algo = lambda: Beam(2000, 20)
-    algo = MCTS
+    algo = lambda: MCTS(turns=15, iter_n=999)
     players, initial_state = init_config.spring(algo)
     game = Game(players, initial_state)
     game.run()
