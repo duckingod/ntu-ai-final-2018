@@ -203,6 +203,7 @@ class HumanPlayer(Player):
     def __init__(self, ai_name, h):
         self.ai_name = ai_name
         self._h = h
+        self.is_human = True
     def h(self, state):
         return self._h(self, state)
     @property
