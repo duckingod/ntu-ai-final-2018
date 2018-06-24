@@ -2,18 +2,22 @@ from game import Game
 import pygame
 from pygame.locals import *
 import numpy as np
+from queue import Queue
+import threading
+from AIAlgo import Beam, MCTS
+
 
 
 class PaintConfig(object):
     class Relation():
-        WIDTH = 3
+        WIDTH = 10
         FRIEND_COLOR = (125, 255, 125)
         EMENY_COLOR = (255, 60, 60)
         def __init__(self, r):
             self.r = r
         @property
         def width(self):
-            return int(abs(self.r) ** 1.5 * self.WIDTH)
+            return int(abs(self.r * 3) ** 2 / 9 * self.WIDTH)
         @property
         def color(self):
             if self.r > 0:
@@ -21,8 +25,10 @@ class PaintConfig(object):
             else:
                 return self.EMENY_COLOR
     class Nation():
-        def __init__(self, n):
+        def __init__(self, n, name, nations):
             self.n = n
+            self.name = name
+            self.nations = nations
         def strhash(self, s, seed):
             from functools import reduce
 
@@ -31,10 +37,14 @@ class PaintConfig(object):
             return reduce(hash_add, [ord(c) for c in s+s[::-1]])
         @property
         def size(self):
+            mean = sum([_n.e for _n in self.nations]) / len(self.nations)
+            return int(self.n.e / mean * 100)
             return int(self.n.p * 50)
         @property
         def color(self):
-            c = np.array([self.strhash(self.n.name, s)%256 for s in [7, 11, 13]])
+            c = np.array([self.strhash(self.name, s)%256 for s in [7, 11, 13]])
+            if self.n.die:
+                c = c * 0.4
             return c
     class Action():
         IMGS = {}
@@ -50,12 +60,10 @@ class PaintConfig(object):
         self.width = 800
         self.height = 600
         self.size = (self.width, self.height)
-    def nation(self, nation):
-        return PaintConfig.Nation(nation)
+    def nation(self, *args):
+        return PaintConfig.Nation(*args)
     def relation(self, r):
-        if abs(r) >= 1:
-            return PaintConfig.Relation(r)
-        return None
+        return PaintConfig.Relation(r)
     def action(self, act):
         return PaintConfig.Action(act)
 
@@ -67,11 +75,13 @@ class GameWithUI(Game):
         self.pc = PaintConfig()
         pygame.init()
         pygame.font.init()
-        self.font = pygame.font.SysFont('Comic Sans MS', 20)
+        self.font = pygame.font.SysFont('Comic Sans MS', 35)
         self.screen = pygame.display.set_mode(self.pc.size)
         d = np.array([n.d for n in initial_state.nations])
         self.nation_pos = self.calc_pos(d)[0]
         self.state = initial_state
+        self.players = players
+        self.event = Queue()
     def calc_pos(self, d, margin=0.1, pos=None):
         # Given a distance matrix d, calc pos of all country
         def sqrt(v):
@@ -110,12 +120,14 @@ class GameWithUI(Game):
         p = p.astype(np.int32)
         return p, ps
     def paint_nation(self):
-        for r, _n in zip(self.nation_pos, self.state.nations):
-            n = self.pc.nation(_n)
+        for i, (r, _n) in enumerate(zip(self.nation_pos, self.state.nations)):
+            name = self.players[i].name
+            n = self.pc.nation(_n, name, self.state.nations)
             pygame.draw.circle(
                     self.screen,
                     n.color, r, n.size, 0)
-            text = self.font.render(_n.name, True, (0,0,0))
+            name_color = (230, 230, 230) if i == self.state.now_player_i else (40, 40, 40)
+            text = self.font.render(name, True, name_color)
             text_rect = text.get_rect(center=r)
             self.screen.blit(text, text_rect)
     def paint_relation(self):
@@ -123,48 +135,66 @@ class GameWithUI(Game):
             for j, n2 in enumerate(self.state.nations):
                 if i>=j: continue
                 r = self.pc.relation(n1.r[j])
-                if r is not None:
-                    pygame.draw.line(
-                            self.screen,
-                            r.color,
-                            self.nation_pos[i],
-                            self.nation_pos[j],
-                            r.width)
+                pygame.draw.line(
+                        self.screen,
+                        r.color,
+                        self.nation_pos[i],
+                        self.nation_pos[j],
+                        r.width)
     def paint_action(self, act, src, tar):
         img = self.pc.action(act).image
-        mid = ((act+tar)/2).astype(np.int32).tolist()
-        img_rect = myimage.get_rect(center=mid)
-        self.screen.blit(img, img_rect)
+        p_src, p_tar = self.nation_pos[src], self.nation_pos[tar]
+        mid = ((p_src + p_tar)/2).astype(np.int32).tolist()
+        # img_rect = myimage.get_rect(center=mid)
+        # self.screen.blit(img, img_rect)
+    def paint_if_human(self):
+        if hasattr(self.state.now_player, 'is_human'):
+            text = self.font.render('Your turn', True, (200,200,200))
+            text_rect = text.get_rect(center=np.array([0.5, 0.9]))
+            self.screen.blit(text, text_rect)
     def paint(self):
-        g.paint_relation()
-        g.paint_nation()
-        g.paint_action('invade',0,0)
+        self.paint_relation()
+        self.paint_nation()
+        self.paint_action('invade',0,0)
+        self.paint_if_human()
     def run(self, n_turns=200):
-        for t in range(n_turns):
+        act_str = lambda act: str(act if type(act[1]) is not int or act[1]>=len(self.players) else (act[0], self.players[act[1]].name))
+        while True:
+            self.event.get()
             p = self.state.now_player
             act = p.action(self.state)
-            self.state = self.state.next_turn(p, act)
+            print(self.state.show())
+            self.state = self.state.next_turn(act)
+            print('After ' + p.name + ' did ' + act_str(act))
+            print(self.state.show())
+            print()
+            while not self.event.empty():
+                self.event.get()
 
 if __name__=='__main__':
     from time import sleep
     from game import Nation
-    class S:
-        def __init__(self, ns): self.nations = ns
-    d = np.array([ [0,.3,.5,.3], [.3,0,.3,.3], [.5,.3,0,.3], [.3,.3,.3,0] ])
-    s = S([Nation(args={
-        'd': d[i],
-        'p': (i+2)*0.25,
-        'r': [1, -1, 0, 5],
-        'name': 'nation_'+str(i)
-        }) for i in range(4)])
-    g = GameWithUI(None, s)
+    import init_config
+
+    algo = lambda: Beam(20, 20)
+    # algo = lambda: MCTS(turns=15, iter_n=300)
+    players, initial_state = init_config.spring(algo)
+    game = Game(players, initial_state)
+
+    game = GameWithUI(players, initial_state)
     clock = pygame.time.Clock()
-    for _ in range(5):
-        for i in range(50):
-            clock.tick(20)
-            for event in pygame.event.get():
-                pass
-            g.screen.fill((0,0,0))
-            g.paint()
-            pygame.display.flip()
+    game_thread = threading.Thread(target=game.run, args=(200,))
+    game_thread.start()
+    while True:
+        clock.tick(100)
+        for event in pygame.event.get():
+            if event.type == QUIT:
+                game_thread.exit()
+                pygame.quit()
+                sys.exit()
+            elif event.type == MOUSEBUTTONUP:
+                game.event.put('go go go')
+        game.screen.fill((0,0,0))
+        game.paint()
+        pygame.display.flip()
 
