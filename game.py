@@ -115,7 +115,8 @@ class State:
         return self.show(show=lambda n: str(n))
     def show(self, show=lambda n: repr(n)):
         def ptr(i, n): return ('> ' if i==self.now_player_i else '  ')
-        return '\n'.join([ptr(i, n) + repr(n) for i, n in enumerate(self.nations)])
+        def h(i): return f'  {self.players[i].h(self):.4f}'
+        return '\n'.join([ptr(i, n) + repr(n) + h(i) for i, n in enumerate(self.nations)])
     def sigmoid(self, x):
         return 1 / (1 + math.exp(-x))
     def next_turn(self, action):

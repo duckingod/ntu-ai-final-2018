@@ -59,7 +59,6 @@ def duck(algo):
     nations = [Nation(args=p) for p in nation_props]
     nations = [n.updated(nations) for n in nations]
     initial_state = State(args={'now_player_i': 0, 'players': players, 'nations': nations})
-    print(initial_state)
     return players, initial_state
 
 def spring(algo):
@@ -94,6 +93,5 @@ def spring(algo):
     nations = [Nation(args=p) for p in nation_props]
     nations = [n.updated(nations) for n in nations]
     initial_state = State(args={'now_player_i': 0, 'players': players, 'nations': nations})
-    print(initial_state)
     return players, initial_state
     
