@@ -2,6 +2,7 @@ import math
 
 from action_effect import export_effect
 from utils import Action, INTERACT_ACTIONS, SELF_ACTIONS
+import utils
 
 import random
 from AIAlgo import SimpleAlgo, Beam, MCTS
@@ -168,7 +169,6 @@ class Game:
         for i, p in enumerate(self.players):
             p.idx = i
     def run(self, n_turns=200):
-        act_str = lambda act: str(act if act[0] in SELF_ACTIONS else (act[0], self.players[act[1]].name))
         for t in range(n_turns):
             n = self.state.nations[self.state.now_player_i]
             idx, die, in_war, e, e0, m, t, i, a, p, r, d = [getattr(n, p) for p in n.PROPERTYS]
@@ -177,7 +177,7 @@ class Game:
             act = p.action(self.state)
             print(self.state.show())
             self.state = self.state.next_turn(act)
-            print('After ' + p.name + ' did ' + act_str(act))
+            print('After ' + p.name + ' did ' + utils.action_string(act, self.players))
             print(self.state.show())
             print()
             input()
@@ -207,27 +207,25 @@ class HumanPlayer(Player):
         return self._h(self, state)
     @property
     def name(self):
-        return 'CPU:'+self.ai_name
+        return self.ai_name
     def action(self, state):
+        i2action = list(state.actions())
+        print("Valid actions:")
+        for i, a in enumerate(i2action):
+            print(f"{i:3d} -> {utils.action_string(a, state.players)}")
         while True:
-            dict_i_a = dict(list(enumerate(state.actions())))
-            print("valid actions:")
-            print(dict_i_a)
             action_input = input("plz input one action index or one action from 'INVADE DENOUNCE MAKE_FRIEND SUPPLY CONSTRUCT EXTORT POLICY':\n>>>")
+            if action_input.isdigit() and 0 <= int(action_input) < len(i2action):
+                return i2action[int(action_input)]
             try:
-                action_input = int(action_input)
-                return dict_i_a[action_input]
+                act = Action[action_input.upper()]
+                target = input("input target nation index: \n>>>")
+                target = None if target == "" else int(target)
+                if (act, target) in state.actions():
+                    return (act, target)
             except:
-                try:
-                    if not Action[action_input] in state.actions():
-                        print("please input valid action")
-                        continue
-                except:
-                    print("please input valid action")
-                    continue
-            target = input("input target nation index: \n>>>")
-            target = None if target == "" else int(target)
-            return (Action[action_input], target)
+                pass
+            print("please input valid action")
 
 class AIPlayer(Player):
     '''

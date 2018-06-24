@@ -6,6 +6,7 @@ from queue import Queue
 import threading
 from AIAlgo import Beam, MCTS
 from utils import Action, INTERACT_ACTIONS, SELF_ACTIONS
+import utils
 
 
 
@@ -162,7 +163,8 @@ class GameWithUI(Game):
     def paint_if_human(self):
         if hasattr(self.state.now_player, 'is_human'):
             text = self.font.render('Your turn', True, (200,200,200))
-            text_rect = text.get_rect(center=np.array([0.5, 0.9]))
+            text_pos = np.array([0.5 * self.pc.size[0], 0.9 * self.pc.size[1]])
+            text_rect = text.get_rect(center=text_pos)
             self.screen.blit(text, text_rect)
     def paint(self):
         def last_act():
@@ -181,14 +183,13 @@ class GameWithUI(Game):
             self.paint_action(*last_act())
         self.paint_if_human()
     def run(self, n_turns=200):
-        act_str = lambda act: str(act if act[0] in SELF_ACTIONS else (act[0], self.players[act[1]].name))
         while True:
             self.event.get()
             p = self.state.now_player
             act = p.action(self.state)
             print(self.state.show())
             self.state = self.state.next_turn(act)
-            print('After ' + p.name + ' did ' + act_str(act))
+            print('After ' + p.name + ' did ' + utils.action_string(act, self.players))
             print(self.state.show())
             print()
             while not self.event.empty():
