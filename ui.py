@@ -5,6 +5,8 @@ import numpy as np
 from queue import Queue
 import threading
 from AIAlgo import Beam, MCTS
+from utils import Action, INTERACT_ACTIONS, SELF_ACTIONS
+import utils
 
 
 
@@ -25,10 +27,19 @@ class PaintConfig(object):
             else:
                 return self.EMENY_COLOR
     class Nation():
+        SIZE = 100
+        ALPHA = 200
+        SURFACE = pygame.Surface((SIZE * 4, SIZE * 4))
         def __init__(self, n, name, nations):
             self.n = n
             self.name = name
             self.nations = nations
+            self.region = pygame.Surface((self.size, self.size))
+            self.region.set_colorkey((0,0,0))
+            self.region.set_alpha(self.ALPHA)
+            mid = (self.size // 2, self.size // 2)
+            pygame.draw.circle(self.region, self.color, mid, self.size // 2)
+            pygame.draw.circle(self.region, (255, 50, 50), mid, self.m_size // 2)
         def strhash(self, s, seed):
             from functools import reduce
 
@@ -38,8 +49,10 @@ class PaintConfig(object):
         @property
         def size(self):
             mean = sum([_n.e for _n in self.nations]) / len(self.nations)
-            return int(self.n.e / mean * 100)
-            return int(self.n.p * 50)
+            return int(self.n.e / mean * self.SIZE)
+        @property
+        def m_size(self):
+            return int(self.size * (self.n.m / self.n.e)) 
         @property
         def color(self):
             c = np.array([self.strhash(self.name, s)%256 for s in [7, 11, 13]])
@@ -49,8 +62,11 @@ class PaintConfig(object):
     class Action():
         IMGS = {}
         def __init__(self, act):
+            act = act.name.lower()
             if not act in self.IMGS:
-                self.IMGS[act] = pygame.image.load(f"resources/{act}.png")
+                img = pygame.image.load(f"resources/{act}.png")
+                img = pygame.transform.scale(img, (50, 50))
+                self.IMGS[act] = img
             self.act = act
         @property
         def image(self):
@@ -60,6 +76,9 @@ class PaintConfig(object):
         self.width = 800
         self.height = 600
         self.size = (self.width, self.height)
+        bg = pygame.image.load(f"resources/background.png")
+        bg = pygame.transform.scale(bg, self.size)
+        self.background = bg
     def nation(self, *args):
         return PaintConfig.Nation(*args)
     def relation(self, r):
@@ -67,20 +86,20 @@ class PaintConfig(object):
     def action(self, act):
         return PaintConfig.Action(act)
 
+
 class GameWithUI(Game):
     class Country():
         def __init__(self, pos):
             self.pos = pos
-    def __init__(self, players, initial_state):
+    def __init__(self, players, initial_state, nation_position=None):
+        super().__init__(players, initial_state)
         self.pc = PaintConfig()
         pygame.init()
         pygame.font.init()
         self.font = pygame.font.SysFont('Comic Sans MS', 35)
         self.screen = pygame.display.set_mode(self.pc.size)
         d = np.array([n.d for n in initial_state.nations])
-        self.nation_pos = self.calc_pos(d)[0]
-        self.state = initial_state
-        self.players = players
+        self.nation_pos = self.calc_pos(d, pos=nation_position)[0]
         self.event = Queue()
     def calc_pos(self, d, margin=0.1, pos=None):
         # Given a distance matrix d, calc pos of all country
@@ -123,11 +142,15 @@ class GameWithUI(Game):
         for i, (r, _n) in enumerate(zip(self.nation_pos, self.state.nations)):
             name = self.players[i].name
             n = self.pc.nation(_n, name, self.state.nations)
-            pygame.draw.circle(
-                    self.screen,
-                    n.color, r, n.size, 0)
-            name_color = (230, 230, 230) if i == self.state.now_player_i else (40, 40, 40)
-            text = self.font.render(name, True, name_color)
+            self.screen.blit(n.region, n.region.get_rect(center=r))
+            name_color = (40, 40, 40)
+            name_str = name
+            if i == self.state.now_player_i:
+                name_color = (230, 230, 230) 
+                name_str = '>> ' + name_str + ' <<'
+            if self.state.last_state and i == self.state.last_state.now_player_i:
+                name_color = (180, 180, 180) 
+            text = self.font.render(name_str, True, name_color)
             text_rect = text.get_rect(center=r)
             self.screen.blit(text, text_rect)
     def paint_relation(self):
@@ -144,32 +167,60 @@ class GameWithUI(Game):
     def paint_action(self, act, src, tar):
         # img = self.pc.action(act).image
         p_src, p_tar = self.nation_pos[src], self.nation_pos[tar]
-        mid = ((p_src + p_tar)/2).astype(np.int32).tolist()
-        # img_rect = myimage.get_rect(center=mid)
-        # self.screen.blit(img, img_rect)
+        pos = tar if act in INTERACT_ACTIONS else src
+        pos = self.nation_pos[pos].astype(np.int32).tolist()
+        pos[1] += 40
+        img_rect = img.get_rect(center=pos)
+        self.screen.blit(img, img_rect)
+    def paint_bg(self):
+        self.screen.blit(self.pc.background, (0, 0))
     def paint_if_human(self):
         if hasattr(self.state.now_player, 'is_human'):
             text = self.font.render('Your turn', True, (200,200,200))
-            text_rect = text.get_rect(center=np.array([0.5, 0.9]))
+            text_pos = np.array([0.5 * self.pc.size[0], 0.9 * self.pc.size[1]])
+            text_rect = text.get_rect(center=text_pos)
             self.screen.blit(text, text_rect)
     def paint(self):
+        def last_act():
+            if self.state.last_state:
+                ls = self.state.last_state
+                act, tar = ls.performed_action
+                if act:
+                    return act, ls.now_player_i, tar
+            return None
+        self.paint_bg()
         self.paint_relation()
         self.paint_nation()
-        self.paint_action('invade',0,0)
+        if last_act():
+            self.paint_action(*last_act())
         self.paint_if_human()
     def run(self, n_turns=200):
-        act_str = lambda act: str(act if type(act[1]) is not int or act[1]>=len(self.players) else (act[0], self.players[act[1]].name))
         while True:
             self.event.get()
             p = self.state.now_player
             act = p.action(self.state)
             print(self.state.show())
             self.state = self.state.next_turn(act)
-            print('After ' + p.name + ' did ' + act_str(act))
+            print('After ' + p.name + ' did ' + utils.action_string(act, self.players))
             print(self.state.show())
             print()
             while not self.event.empty():
                 self.event.get()
+    def start_flow(self):
+        clock = pygame.time.Clock()
+        game_thread = threading.Thread(target=self.run, args=(200,))
+        game_thread.start()
+        while True:
+            clock.tick(100)
+            for event in pygame.event.get():
+                if event.type == QUIT:
+                    game_thread.exit()
+                    pygame.quit()
+                    sys.exit()
+                elif event.type == MOUSEBUTTONUP:
+                    self.event.put('go go go')
+            self.paint()
+            pygame.display.flip()
 
 if __name__=='__main__':
     from time import sleep
@@ -179,22 +230,8 @@ if __name__=='__main__':
     # algo = lambda: Beam(20, 20)
     algo = lambda: MCTS(turns=15, iter_n=300)
     players, initial_state = init_config.spring(algo)
-    game = Game(players, initial_state)
-
-    game = GameWithUI(players, initial_state)
-    clock = pygame.time.Clock()
-    game_thread = threading.Thread(target=game.run, args=(200,))
-    game_thread.start()
-    while True:
-        clock.tick(100)
-        for event in pygame.event.get():
-            if event.type == QUIT:
-                game_thread.exit()
-                pygame.quit()
-                sys.exit()
-            elif event.type == MOUSEBUTTONUP:
-                game.event.put('go go go')
-        game.screen.fill((0,0,0))
-        game.paint()
-        pygame.display.flip()
+    # 'QIN' 'HAN' 'ZHAO' 'WEI'
+    start_pos = np.array([(-1, 0), (0, 0), (0, -1), (0, -0.5)])
+    game = GameWithUI(players, initial_state, start_pos)
+    game.start_flow()
 
