@@ -165,7 +165,7 @@ class GameWithUI(Game):
                         self.nation_pos[j],
                         r.width)
     def paint_action(self, act, src, tar):
-        # img = self.pc.action(act).image
+        img = self.pc.action(act).image
         p_src, p_tar = self.nation_pos[src], self.nation_pos[tar]
         pos = tar if act in INTERACT_ACTIONS else src
         pos = self.nation_pos[pos].astype(np.int32).tolist()
