@@ -26,7 +26,7 @@ class Nation(object):
         >>> new_n = Nation(n) # Copy nation
     """
     PROPERTYS = ['idx', 'die', 'in_war', 'e', 'e0', 'm', 't', 'i', 'a', 'p', 'r', 'd']
-    PARAMS = {'a': 0.3, 'b': 0, 'c': 1}
+    PARAMS = {'a': 0.5, 'b': 0, 'c': 0.3, 'd':0.1, 'e':0.4}
     def __init__(self, n=None, args={}):
         if n is not None:
             for p in self.PROPERTYS:
@@ -44,7 +44,7 @@ class Nation(object):
             self.r[i] = in_range(r, (-1, 1))
         self.r[self.idx] = 0
         self.d[self.idx] = 0
-        self.a = in_range(self.a, (0, 1))
+        self.a = in_range(self.a, (0, 0.4))
         for p in ['e', 'm', 'i', 'p']: # make these greater than zero
             setattr(self, p, max(0, getattr(self, p)))
     def __str__(self):
@@ -52,21 +52,36 @@ class Nation(object):
     def __repr__(self):
         def r_str():
             return ' '.join([f'{r:5.2f}' for r in self.r])
-        return f"{'X' if self.die else 'O'} e:{self.e:7.2f}  e0:{self.e0:5.1f}  m:{self.m:7.2f}  p:{self.p:7.2f}  a:{self.a:7.2f}  r: {r_str()}"
+        idx, die, in_war, e, e0, m, t, i, a, p, r, d = [getattr(self, p) for p in self.PROPERTYS]
+        return f"{'X' if die else 'O'}{'-' if in_war else ' '} e:{e:7.2f}  e0:{e0:5.1f}  m:{m:7.2f}  p:{p:7.2f}  a:{a:4.2f}  i:{i:4.2f}  t:{t:5.2f}  r: {r_str()}"
     def others(self, nations, targets):
         return [v for i, (n, v) in enumerate(zip(nations, targets)) if i != self.idx and not n.die]
+    def growth(self, nations, _a=None):
+        idx, die, in_war, e, e0, m, t, i, a, p, r, d = [getattr(self, p) for p in self.PROPERTYS]
+        if _a is None: _a = a
+        return max(1, (1 - a) * (1 + i + t) / math.exp(0.1 * (e/e0-1)))
     def updated(self, nations):
         ns = nations
         idx, die, in_war, e, e0, m, t, i, a, p, r, d = [getattr(self, p) for p in self.PROPERTYS]
-        ga, gb, gc = [self.PARAMS[k] for k in ['a', 'b', 'c']]
+        ga, gb, gc, gd, ge = [self.PARAMS[k] for k in ['a', 'b', 'c', 'd', 'e']]
         nis, nms = ([n.i for n in nations], [n.m for n in nations])
-        m1 = m + e * a
+        e1 = e * self.growth(nations) if not in_war else e
+        e1 = e1 - m * gd
+        m1 = m + ge * e * a if not in_war else m
+        m1 = min(e1, m1)
         return self.change({
             'in_war': False,
-            'e': e * max(1, (1 - a) * (1 + i + t) / math.exp(0.01 * (e/e0-1))) if not in_war else e,
-            'm': m + e * a,
+            'e': e1,
+            'm': m1,
+        }).refresh(nations)
+    def refresh(self, nations):
+        ns = nations
+        idx, die, in_war, e, e0, m, t, i, a, p, r, d = [getattr(self, p) for p in self.PROPERTYS]
+        ga, gb, gc, gd, ge = [self.PARAMS[k] for k in ['a', 'b', 'c', 'd', 'e']]
+        nis, nms = ([n.i for n in nations], [n.m for n in nations])
+        return self.change({
             't': ga * sum([_r * _d * _i for _r, _d, _i in self.others(ns, zip(r, d, nis))]) + gb,
-            'p': m1 + gc * sum([_r * _d * _m for _r, _d, _m in self.others(ns, zip(r, d, nms))])
+            'p': m + gc * sum([max(0, _r) * _d * _m for _r, _d, _m in self.others(ns, zip(r, d, nms))])
         })
 
 
@@ -89,7 +104,7 @@ class State:
             self.nations = clone(state.nations)
         else:
             self.last_state = None
-        self.performed_action = None
+        self.performed_action = (None, None)
         for k, v in args.items():
             setattr(self, k, v)
     @property
@@ -131,9 +146,9 @@ class State:
         Avaliable actions for player
         """
         idxs = [i for i, n in enumerate(self.nations) if i != self.now_player_i and not n.die]
-        interact_actions = [Action.INVADE, Action.DENOUNCE, Action.MAKE_FRIEND, Action.SUPPLY, Action.EXTORT, ]
+        interact_actions = [Action.INVADE, Action.DENOUNCE, Action.MAKE_FRIEND, Action.SUPPLY]
         interact_actions = [(a, i) for a in interact_actions for i in idxs]
-        self_actions = [(Action.CONSTRUCT, None), (Action.POLICY, 1), (Action.POLICY, -1)]
+        self_actions = [(Action.CONSTRUCT, None), (Action.POLICY, 1), (Action.POLICY, -1), (Action.PRODUCE, None)]
         return interact_actions + self_actions
     def trace(self, l=None):
         if l==None: l = []
@@ -154,12 +169,16 @@ class Game:
         for i, p in enumerate(self.players):
             p.idx = i
     def run(self, n_turns=200):
+        act_str = lambda act: str(act if type(act[1]) is not int or act[1]>=len(self.players) else (act[0], self.players[act[1]].name))
         for t in range(n_turns):
+            n = self.state.nations[self.state.now_player_i]
+            idx, die, in_war, e, e0, m, t, i, a, p, r, d = [getattr(n, p) for p in n.PROPERTYS]
+            print((1 - a) * (1 + i + t) / math.exp(0.1 * (e/e0-1)), (1 - a) * (1 + i + t), math.exp(0.1 * (e/e0-1)))
             p = self.state.now_player
             act = p.action(self.state)
             print(self.state.show())
             self.state = self.state.next_turn(act)
-            print('After player_' + str(p.idx) + " " + p.name + ' did ' + str(act))
+            print('After ' + p.name + ' did ' + act_str(act))
             print(self.state.show())
             print()
             input()
