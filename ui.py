@@ -227,8 +227,8 @@ if __name__=='__main__':
     from game import Nation
     import init_config
 
-    algo = lambda: Beam(20, 20)
-    # algo = lambda: MCTS(turns=15, iter_n=300)
+    # algo = lambda: Beam(20, 20)
+    algo = lambda: MCTS(turns=15, iter_n=300)
     players, initial_state = init_config.spring(algo)
     # 'QIN' 'HAN' 'ZHAO' 'WEI'
     start_pos = np.array([(-1, 0), (0, 0), (0, -1), (0, -0.5)])
