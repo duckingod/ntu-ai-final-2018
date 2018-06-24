@@ -1,7 +1,7 @@
 import math
 
 from action_effect import export_effect
-from utils import Action
+from utils import Action, INTERACT_ACTIONS, SELF_ACTIONS
 
 import random
 from AIAlgo import SimpleAlgo, Beam, MCTS
@@ -146,8 +146,7 @@ class State:
         Avaliable actions for player
         """
         idxs = [i for i, n in enumerate(self.nations) if i != self.now_player_i and not n.die]
-        interact_actions = [Action.INVADE, Action.DENOUNCE, Action.MAKE_FRIEND, Action.SUPPLY]
-        interact_actions = [(a, i) for a in interact_actions for i in idxs]
+        interact_actions = [(a, i) for a in INTERACT_ACTIONS for i in idxs]
         self_actions = [(Action.CONSTRUCT, None), (Action.POLICY, 1), (Action.POLICY, -1), (Action.PRODUCE, None)]
         return interact_actions + self_actions
     def trace(self, l=None):
@@ -169,7 +168,7 @@ class Game:
         for i, p in enumerate(self.players):
             p.idx = i
     def run(self, n_turns=200):
-        act_str = lambda act: str(act if type(act[1]) is not int or act[1]>=len(self.players) else (act[0], self.players[act[1]].name))
+        act_str = lambda act: str(act if act[0] in SELF_ACTIONS else (act[0], self.players[act[1]].name))
         for t in range(n_turns):
             n = self.state.nations[self.state.now_player_i]
             idx, die, in_war, e, e0, m, t, i, a, p, r, d = [getattr(n, p) for p in n.PROPERTYS]

@@ -5,6 +5,7 @@ import numpy as np
 from queue import Queue
 import threading
 from AIAlgo import Beam, MCTS
+from utils import Action, INTERACT_ACTIONS, SELF_ACTIONS
 
 
 
@@ -49,6 +50,7 @@ class PaintConfig(object):
     class Action():
         IMGS = {}
         def __init__(self, act):
+            act = act.name.lower()
             if not act in self.IMGS:
                 self.IMGS[act] = pygame.image.load(f"resources/{act}.png")
             self.act = act
@@ -126,8 +128,14 @@ class GameWithUI(Game):
             pygame.draw.circle(
                     self.screen,
                     n.color, r, n.size, 0)
-            name_color = (230, 230, 230) if i == self.state.now_player_i else (40, 40, 40)
-            text = self.font.render(name, True, name_color)
+            name_color = (40, 40, 40)
+            name_str = name
+            if i == self.state.now_player_i:
+                name_color = (230, 230, 230) 
+                name_str = '>> ' + name_str + ' <<'
+            if self.state.last_state and i == self.state.last_state.now_player_i:
+                name_color = (255, 100, 100) 
+            text = self.font.render(name_str, True, name_color)
             text_rect = text.get_rect(center=r)
             self.screen.blit(text, text_rect)
     def paint_relation(self):
@@ -144,21 +152,34 @@ class GameWithUI(Game):
     def paint_action(self, act, src, tar):
         img = self.pc.action(act).image
         p_src, p_tar = self.nation_pos[src], self.nation_pos[tar]
-        mid = ((p_src + p_tar)/2).astype(np.int32).tolist()
-        # img_rect = myimage.get_rect(center=mid)
-        # self.screen.blit(img, img_rect)
+        pos = tar if act in INTERACT_ACTIONS else src
+        pos = self.nation_pos[pos].astype(np.int32).tolist()
+        pos[1] += 80
+        img_rect = img.get_rect(center=pos)
+        self.screen.blit(img, img_rect)
     def paint_if_human(self):
         if hasattr(self.state.now_player, 'is_human'):
             text = self.font.render('Your turn', True, (200,200,200))
             text_rect = text.get_rect(center=np.array([0.5, 0.9]))
             self.screen.blit(text, text_rect)
     def paint(self):
+        def last_act():
+            if self.state.last_state:
+                ls = self.state.last_state
+                act, tar = ls.performed_action
+                if act:
+                    return act, ls.now_player_i, tar
+            return None
+                
+
+            act, tar = self.state.last_state.performed_action
         self.paint_relation()
         self.paint_nation()
-        self.paint_action('invade',0,0)
+        if last_act():
+            self.paint_action(*last_act())
         self.paint_if_human()
     def run(self, n_turns=200):
-        act_str = lambda act: str(act if type(act[1]) is not int or act[1]>=len(self.players) else (act[0], self.players[act[1]].name))
+        act_str = lambda act: str(act if act[0] in SELF_ACTIONS else (act[0], self.players[act[1]].name))
         while True:
             self.event.get()
             p = self.state.now_player
