@@ -23,8 +23,8 @@ def died(state, n, action, src, tar):
 def common(a, p):
     @extract
     def _common(state, n, action, src, tar):
-        # power = n.m + (n.p - n.m) * 0.5
-        power = n.m
+        power = n.m + (n.p - n.m) * 0.5
+        # power = n.m
         if p=='f':
             return log(n.e + power + 0.1)
         if p=='m':
@@ -80,8 +80,14 @@ def love_union(a, p):
         raise Exception('Unknown personality: ' + p)
     return _dip
 
-def get_h(personality=['f', '', 'tao', 'love'], params=[None, 0.5, 1, 10]):
-    fs = [common, invade, diplomatic, love_union]
+def potential(a, p):
+    @extract
+    def po(state, n, action, src, tar):
+        return a * (n.t / n.i)
+    return po
+
+def get_h(personality=['f', '', 'tao', 'love', ''], params=[None, 0.5, 1, 10, 1]):
+    fs = [common, invade, diplomatic, love_union, potential]
     fs = [f(a, p) for f, p, a in zip(fs, personality, params)]
     fs.append(died)
     def compute(player, state, action):

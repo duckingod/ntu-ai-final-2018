@@ -169,6 +169,7 @@ class Game:
         for i, p in enumerate(self.players):
             p.idx = i
     def run(self, n_turns=200):
+        act_str = lambda act: str(act if type(act[1]) is not int or act[1]>=len(self.players) else (act[0], self.players[act[1]].name))
         for t in range(n_turns):
             n = self.state.nations[self.state.now_player_i]
             idx, die, in_war, e, e0, m, t, i, a, p, r, d = [getattr(n, p) for p in n.PROPERTYS]
@@ -177,7 +178,7 @@ class Game:
             act = p.action(self.state)
             print(self.state.show())
             self.state = self.state.next_turn(act)
-            print('After player_' + str(p.idx) + " " + p.name + ' did ' + str(act))
+            print('After ' + p.name + ' did ' + act_str(act))
             print(self.state.show())
             print()
             input()
@@ -275,7 +276,7 @@ if __name__=='__main__':
     import init_config
     algo = lambda: Beam(2000, 20)
     # algo = lambda: MCTS(turns=15, iter_n=300)
-    players, initial_state = init_config.duck(algo)
+    players, initial_state = init_config.spring(algo)
     game = Game(players, initial_state)
     game.run()
 
