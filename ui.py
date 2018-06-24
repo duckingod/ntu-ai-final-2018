@@ -142,7 +142,7 @@ class GameWithUI(Game):
                         self.nation_pos[j],
                         r.width)
     def paint_action(self, act, src, tar):
-        img = self.pc.action(act).image
+        # img = self.pc.action(act).image
         p_src, p_tar = self.nation_pos[src], self.nation_pos[tar]
         mid = ((p_src + p_tar)/2).astype(np.int32).tolist()
         # img_rect = myimage.get_rect(center=mid)
@@ -176,8 +176,8 @@ if __name__=='__main__':
     from game import Nation
     import init_config
 
-    algo = lambda: Beam(20, 20)
-    # algo = lambda: MCTS(turns=15, iter_n=300)
+    # algo = lambda: Beam(20, 20)
+    algo = lambda: MCTS(turns=15, iter_n=300)
     players, initial_state = init_config.spring(algo)
     game = Game(players, initial_state)
 

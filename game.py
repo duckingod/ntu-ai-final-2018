@@ -112,9 +112,10 @@ class State:
         return self.players[self.now_player_i]
     def __repr__(self):
         return self.show(show=lambda n: str(n))
-    def show(self, show=lambda n: repr(n)):
-        def ptr(i, n): return ('> ' if i==self.now_player_i else '  ')
-        return '\n'.join([ptr(i, n) + repr(n) for i, n in enumerate(self.nations)])
+    def show(self, show=lambda n: repr(n)):                                                                     
+        def ptr(i, n): return ('> ' if i==self.now_player_i else '  ')                                          
+        def h(i): return f'  {self.players[i].h(self):.4f}'                                                     
+        return '\n'.join([ptr(i, n) + repr(n) + h(i) for i, n in enumerate(self.nations)])
     def sigmoid(self, x):
         return 1 / (1 + math.exp(-x))
     def next_turn(self, action):
@@ -181,7 +182,7 @@ class Game:
             print('After ' + p.name + ' did ' + act_str(act))
             print(self.state.show())
             print()
-            input()
+            # input()
 
 class Player:
     '''
@@ -277,7 +278,7 @@ def simple_h_em(player, state):
 if __name__=='__main__':
     import init_config
     # algo = lambda: Beam(2000, 20)
-    algo = lambda: MCTS(turns=20, iter_n=99)
+    algo = lambda: MCTS(turns=12, iter_n=999)
     players, initial_state = init_config.spring(algo)
     game = Game(players, initial_state)
     game.run()

@@ -57,7 +57,7 @@ class MCTS(AIAlgo):
             self.player = player
             self.parent_action = parent_action
             self.child_nodes = []
-    def __init__(self, turns=15, iter_n=99):
+    def __init__(self, turns=12, iter_n=999):
         """ 
         turns: depth of Tree
         iter_n: random simulation times
@@ -65,28 +65,49 @@ class MCTS(AIAlgo):
         self.turns = turns
         self.iter_n = iter_n
     def selection(self, node):
+        level_i = 0
         while node.child_nodes:
+            level_i += 1
             """ maybe need to deal with dead nation situation later
             """
             scores = [child_node.total_score / child_node.visit_n for child_node in node.child_nodes if child_node.visit_n > 1]
             mean_score = np.mean(scores)
             #std_score = max(np.std(scores), 1)
-            std_score = max(np.std(scores), 0.1)
+            std_score = max(np.std(scores), 1)
             total_visit_n = sum([child_node.visit_n for child_node in node.child_nodes])
-            scores_normal = [max(np.sqrt((np.log2(total_visit_n)/child_node.visit_n)*2) + (((child_node.total_score - mean_score) / std_score) + 3) / 6, 0.001) for child_node in node.child_nodes]
-            node = random.choices(node.child_nodes, scores_normal)[0]
-        return node
+            # print(total_visit_n)
+            scores_normal = [max(np.sqrt((np.log2(total_visit_n)/child_node.visit_n)*2) + (((child_node.total_score / child_node.visit_n - mean_score) / std_score) + 2) / 4, 0.001) for child_node in node.child_nodes]
+            # print(random.choices(node.child_nodes, scores_normal))
+            # node = random.choices(node.child_nodes, scores_normal)[0]
+            # print(scores_normal)
+            # for i_tmp, sn in enumerate(scores_normal):
+            #     if sn > 10:
+            #         # print(np.sqrt((np.log2(total_visit_n)/node.child_nodes[i_tmp].visit_n)*2))
+            #         print((((node.child_nodes[i_tmp].total_score - mean_score) / std_score) + 2) / 4)
+            #         print(mean_score)
+            #         print(std_score)
+            #         print(node.child_nodes[i_tmp].total_score)
+            #         print([child_nodes[i_tmp].total_score])
+            node = node.child_nodes[np.argmax(np.array(scores_normal))]
+        return node, level_i
     def expansion(self, node):
         node.child_nodes = [ self.mcts_node(state=node.state.next_turn(a), parent=node, player=node.state.next_turn(a).now_player, parent_action=a) for a in node.state.actions() ]    
         return node.child_nodes[0]
-    def simulation(self, node):
+    def simulation(self, node, level_i):
         state = node.state
-        for i in range(self.turns):
+        need_turns = self.turns-level_i+1
+        # if need_turns <= 0 :
+            # while node.parent:
+            #     node.visit_n += 1
+            #     node = node.parent
+            # return None
+            # return state
+        for i in range(need_turns):
             state = state.next_turn(random.choice(state.actions()))
         return state
     def backpropagation(self, state, node):
         while node.parent:
-            node.total_score += node.parent.player.h(state) / self.dict_player_init_h[node.parent.player.idx]
+            node.total_score += node.parent.player.h(state) #/ self.dict_player_init_h[node.parent.player.idx]
             node.visit_n += 1
             node = node.parent
         return None
@@ -94,9 +115,14 @@ class MCTS(AIAlgo):
         self.root = self.mcts_node(state=state, parent=None, player=state.now_player, parent_action=None)
         self.dict_player_init_h = {player.idx:player.h(state) for player in state.players }
         for i in range(self.iter_n):
-            node_select= self.selection(self.root)
-            node_new = self.expansion(node_select)
-            state_final = self.simulation(node_new)
+            node_select, level_i = self.selection(self.root)
+            if level_i <= self.turns:
+                node_new = self.expansion(node_select)
+            else:
+                node_new = node_select
+            state_final = self.simulation(node_new, level_i)
+            # if state_final != None:
             self.backpropagation(state_final, node_new)
+            # print([(child_node.total_score / child_node.visit_n) for child_node in self.root.child_nodes])
         node_best = max(self.root.child_nodes, key=lambda child_node: child_node.total_score / child_node.visit_n)
         return node_best.parent_action
