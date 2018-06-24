@@ -41,6 +41,8 @@ class DefaultEffect():
             e_loss = ap * r / 4
             nations[tar] = tar_n.change({'in_war': True, 'm': tar_n.m + tar_n.m * (1 - r)})
             nations[src] = src_n.change({'in_war': True, 'm': src_n.m - tar_n.m * (1 - r) / d})
+        nations[tar] = nations[tar].refresh(nations)
+        nations[src] = nations[src].refresh(nations)
 
         
     @staticmethod
@@ -48,12 +50,16 @@ class DefaultEffect():
         src_n, tar_n = nations[src], nations[tar]
         nations[src] = src_n.change({'r': [r if i!=tar else r - (2-r) * 0.1 for i, r in enumerate(src_n.r)]})
         nations[tar] = tar_n.change({'r': [r - (2 - r) * (0.05 if i!=src else 0.1) for i, r in enumerate(tar_n.r)]})
+        nations[tar] = nations[tar].refresh(nations)
+        nations[src] = nations[src].refresh(nations)
 
     @staticmethod
     def make_friend(nations, src, tar):
         src_n, tar_n = nations[src], nations[tar]
-        nations[src] = src_n.change({'r': [r if i!=tar else r - (2-r) * 0.1 for i, r in enumerate(src_n.r)]})
-        nations[tar] = tar_n.change({'r': [r - (2 - r) * (0.05 if i!=src else 0.1) for i, r in enumerate(tar_n.r)]})
+        nations[src] = src_n.change({'r': [r if i!=tar else r + (2+r) * 0.1 for i, r in enumerate(src_n.r)]})
+        nations[tar] = tar_n.change({'r': [r if i!=src else r + (2+r) * 0.1 for i, r in enumerate(tar_n.r)]})
+        nations[tar] = nations[tar].refresh(nations)
+        nations[src] = nations[src].refresh(nations)
 
     @staticmethod
     def supply(nations, src, tar):
@@ -66,13 +72,16 @@ class DefaultEffect():
             'e': tar_n.e + (1 - src_n.a) * src_n.i,
             'r': [r if i!=src else r + (2+r) * 0.2 for i, r in enumerate(tar_n.r)]
             })
+        nations[tar] = nations[tar].refresh(nations)
+        nations[src] = nations[src].refresh(nations)
 
     @staticmethod
     def produce(nations, src, tar):
         src_n = nations[src]
         nations[src] = src_n.change({
-            'e': src_n.e * src_n.growth(nations, _a=0),
+            'e': src_n.e * src_n.growth(_a=0),
             })
+        nations[src] = nations[src].refresh(nations)
     @staticmethod
     def extort(nations, src, tar):
         src_n = nations[src]
@@ -84,12 +93,15 @@ class DefaultEffect():
             'e': tar_n.e - e_loss,
             'r': [r if i!=src else r - (2-r) * 0.2 for i, r in enumerate(tar_n.r)]
             })
+        nations[src] = nations[src].refresh(nations)
+        nations[tar] = nations[tar].refresh(nations)
 
     @staticmethod
     def construct(nations, src, _):
         i = nations[src].i
         src_n = nations[src]
         nations[src] = src_n.change({'i': i + 0.1 * ((2-i) if i < 1 else 1)})
+        nations[src] = nations[src].refresh(nations)
 
     @staticmethod
     def policy(nations, src, flag):
@@ -100,6 +112,7 @@ class DefaultEffect():
         """
         src_n = nations[src]
         nations[src] = src_n.change({'a': src_n.a + 0.1 * flag})
+        nations[src] = nations[src].refresh(nations)
 
 def invade_v2(nations, src, tar):
     src_n, tar_n = nations[src], nations[tar]
@@ -218,6 +231,33 @@ def policy_strong(nations, src, flag):
     nations[src] = src_n.change({'a': src_n.a + 0.2 * flag})
 
 
+def denounce_strong(nations, src, tar):
+    src_n, tar_n = nations[src], nations[tar]
+    nations[src] = src_n.change({'r': [r if i!=tar else r - (2-r) * 0.5 for i, r in enumerate(src_n.r)]})
+    nations[tar] = tar_n.change({'r': [r - (2 - r) * (0.25 if i!=src else 0.5) for i, r in enumerate(tar_n.r)]})
+    nations[tar] = nations[tar].refresh(nations)
+    nations[src] = nations[src].refresh(nations)
+
+def make_friend_strong(nations, src, tar):
+    src_n, tar_n = nations[src], nations[tar]
+    nations[src] = src_n.change({'r': [r if i!=tar else r + (2-r) * 0.4 for i, r in enumerate(src_n.r)]})
+    nations[tar] = tar_n.change({'r': [r if i!=src else r + (2-r) * 0.4 for i, r in enumerate(tar_n.r)]})
+    nations[tar] = nations[tar].refresh(nations)
+    nations[src] = nations[src].refresh(nations)
+
+def supply_strong(nations, src, tar):
+    src_n, tar_n = nations[src], nations[tar]
+    e_trans = src_n.e - src_n.e / src_n.growth()
+    nations[src] = src_n.change({
+        'e': src_n.e - e_trans,
+        'r': [r if i!=tar else r + (1+r) * 0.7 for i, r in enumerate(src_n.r)]
+        })
+    nations[tar] = tar_n.change({
+        'e': tar_n.e + e_trans,
+        'r': [r if i!=src else r + (1+r) * 0.7 for i, r in enumerate(tar_n.r)]
+        })
+    nations[tar] = nations[tar].refresh(nations)
+    nations[src] = nations[src].refresh(nations)
 
 export_effect = {
         'invade': DefaultEffect.invade,
@@ -236,3 +276,6 @@ export_effect['invade'] = invade_e0_easy_die
 export_effect['invade'] = invade_get_e0
 
 export_effect['policy'] = policy_strong 
+export_effect['supply'] = supply_strong
+export_effect['make_friend'] = make_friend_strong
+export_effect['denounce'] = denounce_strong

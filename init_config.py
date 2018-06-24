@@ -99,3 +99,48 @@ def spring(algo):
     nations = [n.updated(nations) for n in nations]
     initial_state = State(args={'now_player_i': 0, 'players': players, 'nations': nations})
     return players, initial_state
+
+def duck_spring(algo):
+    """
+        2
+        3
+    0   1
+    def get_h(personality=['f', '', 'tao', 'love', ''], params=[None, 0.5, 1, 10, 1]):
+        fs = [common, invade, diplomatic, love_union, potential]
+    """
+    
+    per = ['f', '', 'tao', 'love', '']
+    per_p = [0, 0.5, 1, 4, 0.5]
+    p = (per, per_p)
+    players = [
+            AIPlayer('Qin', algo(), get_h(*p)),
+            AIPlayer('Han', algo(), get_h(*p)),
+            AIPlayer('Zhao', algo(), get_h(*p)),
+            AIPlayer('Qi', algo(), get_h(*p)),
+            # HumanPlayer('xxxx', simple_h)
+            ]
+    dist = [
+            [0, 0.8, 0.6, 0.4],
+            [0.8, 0, 0.8, 0.8],
+            [0.6, 0.8, 0, 0.6],
+            [0.4, 0.8, 0.6, 0],
+            ]
+    relations = [
+			[0, -0.4, -0.4, 0],
+			[-0.4, 0, 0.4, 0.3],
+			[-0.4, 0.4, 0, 0.3],
+			[0, 0.3, 0.3, 0],
+            ]
+    # relations = [[0,0,0], [0,0,0], [0,0,0]]
+    nation_props = [
+			{'e': 45, 'e0': 15, 'm': 14, 'i':  1.5, 'a': 0.2},
+			{'e': 9, 'e0': 3, 'm': 5,  'i': 1.4, 'a': 0},
+			{'e': 27,  'e0': 8,  'm': 10,  'i': 1.4, 'a': 0.2},
+			{'e': 21, 'e0': 6, 'm': 8, 'i':  1.6, 'a': 0.2},
+            ]
+    for i, np in enumerate(nation_props):
+        np.update({'idx': i, 'r': relations[i], 'd': dist[i], 'die': False})
+    nations = [Nation(args=p) for p in nation_props]
+    nations = [n.updated(nations) for n in nations]
+    initial_state = State(args={'now_player_i': 0, 'players': players, 'nations': nations})
+    return players, initial_state

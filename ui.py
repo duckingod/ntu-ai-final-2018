@@ -195,11 +195,11 @@ class GameWithUI(Game):
             self.paint_action(*last_act())
         self.paint_if_human()
     def run(self, n_turns=200):
+        print(self.state.show())
         while True:
             self.event.get()
             p = self.state.now_player
             act = p.action(self.state)
-            print(self.state.show())
             self.state = self.state.next_turn(act)
             print('After ' + p.name + ' did ' + utils.action_string(act, self.players))
             print(self.state.show())
@@ -228,9 +228,8 @@ if __name__=='__main__':
 
     # algo = lambda: Beam(20, 20)
     algo = lambda: MCTS(turns=15, iter_n=300)
-    players, initial_state = init_config.spring(algo)
-    # 'QIN' 'HAN' 'ZHAO' 'WEI'
-    start_pos = np.array([(-1, 0), (0, 0), (0, -1), (0, -0.5)])
+    players, initial_state = init_config.duck_spring(algo)
+    start_pos = np.array([(-1, 0), (0, 0), (0, -1), (1, 0)])
     game = GameWithUI(players, initial_state, start_pos)
     game.start_flow()
 

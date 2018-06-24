@@ -57,7 +57,7 @@ class Nation(object):
         return f"{'X' if die else 'O'}{'-' if in_war else ' '} e:{e:7.2f}  e0:{e0:5.1f}  m:{m:7.2f}  p:{p:7.2f}  a:{a:4.2f}  i:{i:4.2f}  t:{t:5.2f}  r: {r_str()}"
     def others(self, nations, targets):
         return [v for i, (n, v) in enumerate(zip(nations, targets)) if i != self.idx and not n.die]
-    def growth(self, nations, _a=None):
+    def growth(self, _a=None):
         idx, die, in_war, e, e0, m, t, i, a, p, r, d = [getattr(self, p) for p in self.PROPERTYS]
         if _a is None: _a = a
         return max(1, (1 - a) * (1 + i + t) / math.exp(0.1 * (e/e0-1)))
@@ -66,7 +66,7 @@ class Nation(object):
         idx, die, in_war, e, e0, m, t, i, a, p, r, d = [getattr(self, p) for p in self.PROPERTYS]
         ga, gb, gc, gd, ge = [self.PARAMS[k] for k in ['a', 'b', 'c', 'd', 'e']]
         nis, nms = ([n.i for n in nations], [n.m for n in nations])
-        e1 = e * self.growth(nations) if not in_war else e
+        e1 = e * self.growth() if not in_war else e
         e1 = e1 - m * gd
         m1 = m + ge * e * a if not in_war else m
         m1 = min(e1, m1)
@@ -181,7 +181,6 @@ class Game:
             print('After ' + p.name + ' did ' + utils.action_string(act, self.players))
             print(self.state.show())
             print()
-            # input()
 
 class Player:
     '''
