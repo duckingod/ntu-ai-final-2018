@@ -109,8 +109,10 @@ def duck_spring(algo):
         fs = [common, invade, diplomatic, love_union, potential]
     """
     
-    per = ['f', '', 'tao', 'love', '']
-    per_p = [0, 0.5, 1, 4, 0.5]
+    # per = ['f', '', 'tao', 'love', '']
+    # per_p = [0, 0.5, 1, 4, 0.5]
+    per=['f', '', 'tao', 'love', '', '', '', '']
+    per_p=[None, 0.5, 1, 10, 3, 0.5, 0.5]
     p = (per, per_p)
     players = [
             AIPlayer('Qin', algo(), get_h(*p)),

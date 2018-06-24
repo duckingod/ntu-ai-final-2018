@@ -233,8 +233,8 @@ def policy_strong(nations, src, flag):
 
 def denounce_strong(nations, src, tar):
     src_n, tar_n = nations[src], nations[tar]
-    nations[src] = src_n.change({'r': [r if i!=tar else r - (2-r) * 0.5 for i, r in enumerate(src_n.r)]})
-    nations[tar] = tar_n.change({'r': [r - (2 - r) * (0.25 if i!=src else 0.5) for i, r in enumerate(tar_n.r)]})
+    nations[src] = src_n.change({'r': [r if i!=tar else r - (1 + r) * 0.5 for i, r in enumerate(src_n.r)]})
+    nations[tar] = tar_n.change({'r': [r - (1 + r) * (0.25 if i!=src else 0.5) for i, r in enumerate(tar_n.r)]})
     nations[tar] = nations[tar].refresh(nations)
     nations[src] = nations[src].refresh(nations)
 

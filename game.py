@@ -27,7 +27,7 @@ class Nation(object):
         >>> new_n = Nation(n) # Copy nation
     """
     PROPERTYS = ['idx', 'die', 'in_war', 'e', 'e0', 'm', 't', 'i', 'a', 'p', 'r', 'd']
-    PARAMS = {'a': 0.5, 'b': 0, 'c': 0.3, 'd':0.1, 'e':0.4}
+    PARAMS = {'a': 0.5, 'b': 0, 'c': 0.3, 'd':0.1, 'e':0.4, 'm_dec':0.8}
     def __init__(self, n=None, args={}):
         if n is not None:
             for p in self.PROPERTYS:
@@ -64,11 +64,12 @@ class Nation(object):
     def updated(self, nations):
         ns = nations
         idx, die, in_war, e, e0, m, t, i, a, p, r, d = [getattr(self, p) for p in self.PROPERTYS]
-        ga, gb, gc, gd, ge = [self.PARAMS[k] for k in ['a', 'b', 'c', 'd', 'e']]
+        ga, gb, gc, gd, ge, m_dec = [self.PARAMS[k] for k in ['a', 'b', 'c', 'd', 'e', 'm_dec']]
         nis, nms = ([n.i for n in nations], [n.m for n in nations])
         e1 = e * self.growth() if not in_war else e
         e1 = e1 - m * gd
-        m1 = m + ge * e * a if not in_war else m
+        m1 = m * m_dec
+        m1 = m1 + ge * e * a if not in_war else m1
         m1 = min(e1, m1)
         return self.change({
             'in_war': False,

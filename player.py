@@ -18,7 +18,7 @@ def sn(player, state):
 
 @extract
 def died(state, n, action, src, tar):
-    return -1000000 if n.die else 0
+    return -30 if n.die else 0
 
 def common(a, p):
     @extract
@@ -80,14 +80,44 @@ def love_union(a, p):
         raise Exception('Unknown personality: ' + p)
     return _dip
 
-def potential(a, p):
+def potential_t(a, p):
     @extract
     def po(state, n, action, src, tar):
         return a * (n.t / n.i)
     return po
 
-def get_h(personality=['f', '', 'tao', 'love', ''], params=[None, 0.5, 1, 10, 1]):
-    fs = [common, invade, diplomatic, love_union, potential]
+def potential_e0(a, p):
+    @extract
+    def po(state, n, action, src, tar):
+        return a * n.e0
+    return po
+
+def security(a, p):
+    """
+    How security == How it won't beat by the others
+    """
+    @extract
+    def sss(state, n, action, src, tar):
+        def win_prob(p, d):
+            a = log((n.p * d + 1) / (  p + 1))
+            b = log((  p * d + 1) / (n.p + 1))
+            return l * a + (1 - l) * -b
+        nations = state.nations
+        nps = [_n.p for _n in nations]
+        rs = [win_prob(p, d) for p, d in n.others(nations, zip(nps, n.d))] 
+        return a * sum(rs) / (len(rs) + 0.1)
+    if p == '':
+        l = 0.5
+    if p == 'def':
+        l = 0.25
+    if p == 'war':
+        l = 0.75
+    return sss
+
+def get_h(
+        personality=['f', '', 'tao', 'love', '', '', '', ''],
+        params=[None, 0.5, 1, 10, 3, 0.5, 0.5]):
+    fs = [common, invade, diplomatic, love_union, potential_t, potential_e0, security]
     fs = [f(a, p) for f, p, a in zip(fs, personality, params)]
     fs.append(died)
     def compute(player, state):
