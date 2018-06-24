@@ -70,7 +70,8 @@ class MCTS(AIAlgo):
             """
             scores = [child_node.total_score / child_node.visit_n for child_node in node.child_nodes if child_node.visit_n > 1]
             mean_score = np.mean(scores)
-            std_score = max(np.std(scores), 1)
+            #std_score = max(np.std(scores), 1)
+            std_score = max(np.std(scores), 0.1)
             total_visit_n = sum([child_node.visit_n for child_node in node.child_nodes])
             scores_normal = [max(np.sqrt((np.log2(total_visit_n)/child_node.visit_n)*2) + (((child_node.total_score - mean_score) / std_score) + 3) / 6, 0.001) for child_node in node.child_nodes]
             node = random.choices(node.child_nodes, scores_normal)[0]
