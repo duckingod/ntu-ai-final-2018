@@ -122,7 +122,7 @@ class GameWithUI(Game):
                     if abs(diff) < 0.1:
                         o += unit * (0.125-abs(diff))
                     from random import random as rnd
-                    sq_diff = sqrt(p[i]-p[j]) - d[i][j]
+                    sq_diff = sqrt(p[i]-p[j]) - (1.5-d[i][j])
                     o += - 0.3 * (rr[_t]*(rnd()-0.5) + sq_diff) * unit
                 off[i] = o
             p = p + off
@@ -211,7 +211,7 @@ class GameWithUI(Game):
         game_thread = threading.Thread(target=self.run, args=(200,))
         game_thread.start()
         while True:
-            clock.tick(100)
+            clock.tick(300)
             for event in pygame.event.get():
                 if event.type == QUIT:
                     game_thread.exit()
@@ -227,7 +227,7 @@ if __name__=='__main__':
     from game import Nation
     import init_config
 
-    algo = lambda: Beam(20, 20)
+    algo = lambda: Beam(500, 15)
     # algo = lambda: MCTS(turns=15, iter_n=300)
     players, initial_state = init_config.spring(algo)
     # 'QIN' 'HAN' 'ZHAO' 'WEI'
