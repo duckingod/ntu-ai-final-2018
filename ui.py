@@ -52,7 +52,9 @@ class PaintConfig(object):
         def __init__(self, act):
             act = act.name.lower()
             if not act in self.IMGS:
-                self.IMGS[act] = pygame.image.load(f"resources/{act}.png")
+                img = pygame.image.load(f"resources/{act}.png")
+                img = pygame.transform.scale(img, (50, 50))
+                self.IMGS[act] = img
             self.act = act
         @property
         def image(self):
@@ -154,7 +156,7 @@ class GameWithUI(Game):
         p_src, p_tar = self.nation_pos[src], self.nation_pos[tar]
         pos = tar if act in INTERACT_ACTIONS else src
         pos = self.nation_pos[pos].astype(np.int32).tolist()
-        pos[1] += 80
+        pos[1] += 40
         img_rect = img.get_rect(center=pos)
         self.screen.blit(img, img_rect)
     def paint_if_human(self):
