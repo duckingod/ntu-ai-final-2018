@@ -149,7 +149,7 @@ class GameWithUI(Game):
                 name_color = (230, 230, 230) 
                 name_str = '>> ' + name_str + ' <<'
             if self.state.last_state and i == self.state.last_state.now_player_i:
-                name_color = (255, 100, 100) 
+                name_color = (180, 180, 180) 
             text = self.font.render(name_str, True, name_color)
             text_rect = text.get_rect(center=r)
             self.screen.blit(text, text_rect)
@@ -230,7 +230,8 @@ if __name__=='__main__':
     algo = lambda: Beam(20, 20)
     # algo = lambda: MCTS(turns=15, iter_n=300)
     players, initial_state = init_config.spring(algo)
-
-    game = GameWithUI(players, initial_state)
+    # 'QIN' 'HAN' 'ZHAO' 'WEI'
+    start_pos = np.array([(-1, 0), (0, 0), (0, -1), (0, -0.5)])
+    game = GameWithUI(players, initial_state, start_pos)
     game.start_flow()
 
